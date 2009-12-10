@@ -11,6 +11,7 @@ description:
         A FFI binding to libmtp
         See <http://libmtp.sourceforge.net> for more information on the
         libmtp library.
+extra-source-files: README.md
 build-type: Simple
 cabal-version: >= 1.2
 
