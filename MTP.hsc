@@ -1,4 +1,14 @@
-{-# LANGUAGE CPP, ForeignFunctionInterface, EmptyDataDecls, DeriveDataTypeable #-}
+{-# LANGUAGE CPP, ForeignFunctionInterface, EmptyDataDecls,
+             DeriveDataTypeable #-}
+
+-- |
+-- Module      : MTP
+-- Copyright   : (c) Joachim Fasting
+-- License     : LGPL
+--
+-- Maintainer  : Joachim Fasting <joachim.fasting@gmail.com>
+-- Stability   : unstable
+-- Portability : not portable
 
 module MTP (
     -- * Types
