@@ -22,7 +22,8 @@ module MTP (
     doesTrackExist,
     getTrackListing,
     getTrackToFile,
-    sendTrackFromFile
+    sendTrackFromFile,
+    updateTrack
     ) where
 
 import Control.Exception
@@ -274,6 +275,11 @@ foreign import ccall unsafe "LIBMTP_Send_Track_From_File" c_sendTrackFromFile
     -> Ptr Data
     -> IO CInt
 
+foreign import ccall unsafe "LIBMTP_Update_Track_Metadata"
+    c_update_track_metadata :: Ptr MTPDevice
+                            -> Ptr Track_t
+                            -> IO CInt
+
 ------------------------------------------------------------------------------
 -- High-level interface
 ------------------------------------------------------------------------------
@@ -495,3 +501,9 @@ sendTrackFromFile :: MTPHandle -> FilePath -> Track -> IO CInt
 sendTrackFromFile h n t = withMTPHandle h $ \devptr -> do
     withCAString n $ \strptr -> withTrackPtr t $ \tt_ptr ->
         c_sendTrackFromFile devptr strptr tt_ptr nullPtr nullPtr
+
+-- | Update track metadata.
+updateTrack :: MTPHandle -> Track -> IO CInt
+updateTrack h t = withMTPHandle h $ \devptr -> do
+    withTrackPtr t $ \tt_ptr ->
+        c_update_track_metadata devptr tt_ptr
