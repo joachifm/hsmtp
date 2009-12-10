@@ -1,4 +1,4 @@
-{-# LANGUAGE CPP, ForeignFunctionInterface, EmptyDataDecls #-}
+{-# LANGUAGE CPP, ForeignFunctionInterface, EmptyDataDecls, DeriveDataTypeable #-}
 
 module MTP (
     -- * Types
@@ -16,7 +16,8 @@ module MTP (
     sendTrackFromFile
     ) where
 
-import Control.Exception (bracket)
+import Control.Exception
+import Data.Typeable
 import Foreign
 import Foreign.C.Types
 import Foreign.C.String
@@ -192,6 +193,12 @@ foreign import ccall unsafe "LIBMTP_Send_Track_From_File" c_sendTrackFromFile
 -- High-level interface
 ------------------------------------------------------------------------------
 
+-- | MTP exceptions.
+data MTPException = NoDevice
+    deriving (Eq, Show, Typeable)
+
+instance Exception MTPException where
+
 -- | File metadata.
 data File = File
     { fileID :: Int
@@ -279,18 +286,17 @@ withTrackPtr t = bracket alloc free
 -- | Open a connection to the first available MTP device and run an
 -- action, closing the connection afterwards.
 withFirstDevice :: (MTPHandle -> IO a) -> IO a
-withFirstDevice = bracket (do Just h <- getFirstDevice; return h)
-                          releaseDevice
+withFirstDevice = bracket getFirstDevice releaseDevice
 
 -- | Connect to the first available MTP device.
-getFirstDevice :: IO (Maybe MTPHandle)
+getFirstDevice :: IO MTPHandle
 getFirstDevice = do
     devptr <- c_getFirstDevice
     if devptr == nullPtr
-       then return Nothing
+       then throw NoDevice
        else do
            dev <- newForeignPtr finalizerFree devptr
-           return (Just (MTPHandle dev))
+           return (MTPHandle dev)
 
 -- | Close connection to a MTP device.
 releaseDevice :: MTPHandle -> IO ()
