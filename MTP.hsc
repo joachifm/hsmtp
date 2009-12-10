@@ -2,9 +2,14 @@
 
 module MTP (
     -- * Types
-    MTPHandle, Track(..), File(..),
+    MTPHandle, Track(..), File(..), FileType,
     -- * Constants
     version,
+    wav, mp3, wma, ogg, audible, mp4, undef_audio, wmv, avi, mpeg, asf, qt,
+    undef_video, jpeg, jfif, tiff, bmp, gif, pict, png, vcalendar1,
+    vcalendar2, vcard2, vcard3, windowsimageformat, winexec, text, html,
+    firmware, aac, mediacard, flac, mp2, m4a, doc, xml, xls, ppt, mht, jp2,
+    unknown,
     -- * Device management
     getFirstDevice, releaseDevice,
     withFirstDevice,
@@ -41,6 +46,54 @@ version = #const LIBMTP_VERSION_STRING
 ------------------------------------------------------------------------------
 -- Types
 ------------------------------------------------------------------------------
+
+-- | Filetype enumeration.
+newtype FileType = FileType { unFileType :: CInt }
+    deriving (Eq, Ord, Show)
+
+#{enum FileType, FileType
+ ,wav = LIBMTP_FILETYPE_WAV
+ ,mp3 = LIBMTP_FILETYPE_MP3
+ ,wma = LIBMTP_FILETYPE_WMA
+ ,ogg = LIBMTP_FILETYPE_OGG
+ ,audible = LIBMTP_FILETYPE_AUDIBLE
+ ,mp4 = LIBMTP_FILETYPE_MP4
+ ,undef_audio = LIBMTP_FILETYPE_UNDEF_AUDIO
+ ,wmv = LIBMTP_FILETYPE_WMV
+ ,avi = LIBMTP_FILETYPE_AVI
+ ,mpeg = LIBMTP_FILETYPE_MPEG
+ ,asf = LIBMTP_FILETYPE_ASF
+ ,qt = LIBMTP_FILETYPE_QT
+ ,undef_video = LIBMTP_FILETYPE_UNDEF_VIDEO
+ ,jpeg = LIBMTP_FILETYPE_JPEG
+ ,jfif = LIBMTP_FILETYPE_JFIF
+ ,tiff = LIBMTP_FILETYPE_TIFF
+ ,bmp = LIBMTP_FILETYPE_BMP
+ ,gif = LIBMTP_FILETYPE_GIF
+ ,pict = LIBMTP_FILETYPE_PICT
+ ,png = LIBMTP_FILETYPE_PNG
+ ,vcalendar1 = LIBMTP_FILETYPE_VCALENDAR1
+ ,vcalendar2 = LIBMTP_FILETYPE_VCALENDAR2
+ ,vcard2 = LIBMTP_FILETYPE_VCARD2
+ ,vcard3 = LIBMTP_FILETYPE_VCARD3
+ ,windowsimageformat = LIBMTP_FILETYPE_WINDOWSIMAGEFORMAT
+ ,winexec = LIBMTP_FILETYPE_WINEXEC
+ ,text = LIBMTP_FILETYPE_TEXT
+ ,html = LIBMTP_FILETYPE_HTML
+ ,firmware = LIBMTP_FILETYPE_FIRMWARE
+ ,aac = LIBMTP_FILETYPE_AAC
+ ,mediacard = LIBMTP_FILETYPE_MEDIACARD
+ ,flac = LIBMTP_FILETYPE_FLAC
+ ,mp2 = LIBMTP_FILETYPE_MP2
+ ,m4a = LIBMTP_FILETYPE_M4A
+ ,doc = LIBMTP_FILETYPE_DOC
+ ,xml = LIBMTP_FILETYPE_XML
+ ,xls = LIBMTP_FILETYPE_XLS
+ ,ppt = LIBMTP_FILETYPE_PPT
+ ,mht = LIBMTP_FILETYPE_MHT
+ ,jp2 = LIBMTP_FILETYPE_JP2
+ ,unknown = LIBMTP_FILETYPE_UNKNOWN
+ }
 
 -- Opaque types, only passed around between C funcs, but never
 -- dereferenced on the Haskell side.
@@ -226,7 +279,7 @@ data File = File
     , fileStorageID :: Int
     , fileName :: String
     , fileSize :: Integer
-    , fileType :: Int
+    , fileType :: FileType
     } deriving (Eq, Show)
 
 -- | Track metadata.
@@ -251,7 +304,7 @@ data Track = Track
     , trackRating :: Int
     , trackUseCount :: Int
     , trackFileSize :: Integer
-    , trackFileType :: Int
+    , trackFileType :: FileType
     } deriving (Eq, Show)
 
 -- | A handle to an MTP device connection.
@@ -299,7 +352,7 @@ withTrackPtr t = bracket alloc free
                               , tt_rating = fromIntegral (trackRating t)
                               , tt_usecount = fromIntegral (trackUseCount t)
                               , tt_filesize = fromIntegral (trackFileSize t)
-                              , tt_filetype = fromIntegral (trackFileType t)
+                              , tt_filetype = unFileType (trackFileType t)
                               , tt_next = nullPtr
                               }
 
@@ -348,7 +401,7 @@ getFileListing h = withMTPHandle h $ \ptr -> do
                           , fileStorageID = fromIntegral (ft_storage_id ft)
                           , fileName = n
                           , fileSize = fromIntegral (ft_filesize ft)
-                          , fileType = fromIntegral (ft_filetype ft)
+                          , fileType = FileType (ft_filetype ft)
                           }
 
 -- | Copy a file from the device to a local file.
@@ -407,7 +460,7 @@ getTrackListing h = withMTPHandle h $ \ptr -> do
                             , trackRating = fromIntegral (tt_rating tt)
                             , trackUseCount = fromIntegral (tt_usecount tt)
                             , trackFileSize = fromIntegral (tt_filesize tt)
-                            , trackFileType = fromIntegral (tt_filetype tt)
+                            , trackFileType = FileType (tt_filetype tt)
                             }
 
 -- | Copy a track from the device to a local file.
