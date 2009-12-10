@@ -42,9 +42,11 @@ version = #const LIBMTP_VERSION_STRING
 -- Types
 ------------------------------------------------------------------------------
 
--- An opaque type, only passed around between C funcs, but never
+-- Opaque types, only passed around between C funcs, but never
 -- dereferenced on the Haskell side.
 data MTPDevice
+data Data
+data Callback
 
 -- An intermediate structure for the LIBMTP_file_t struct.
 -- We need this because LIBMPT_file_t is recursive.
@@ -177,15 +179,15 @@ foreign import ccall unsafe "LIBMTP_Get_File_To_File" c_getFileToFile
     :: (Ptr MTPDevice)
     -> CInt
     -> CString
-    -> Ptr ()
-    -> Ptr ()
+    -> Ptr Callback
+    -> Ptr Data
     -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Send_File_From_File" c_sendFileFromFile
     :: (Ptr MTPDevice)
     -> CString
-    -> Ptr ()
-    -> Ptr ()
+    -> Ptr Callback
+    -> Ptr Data
     -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Get_Tracklisting" c_getTrackListing
@@ -195,16 +197,16 @@ foreign import ccall unsafe "LIBMTP_Get_Track_To_File" c_getTrackToFile
     :: (Ptr MTPDevice)
     -> CInt
     -> CString
-    -> Ptr ()
-    -> Ptr ()
+    -> Ptr Callback
+    -> Ptr Data
     -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Send_Track_From_File" c_sendTrackFromFile
     :: (Ptr MTPDevice)
     -> CString
     -> (Ptr Track_t)
-    -> Ptr ()
-    -> Ptr ()
+    -> Ptr Callback
+    -> Ptr Data
     -> IO CInt
 
 ------------------------------------------------------------------------------
