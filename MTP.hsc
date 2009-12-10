@@ -9,7 +9,10 @@ module MTP (
     getFirstDevice, releaseDevice,
     withFirstDevice,
     getDeviceVersion,
+    -- * File management
     getFileListing,
+    getFileToFile,
+    sendFileFromFile,
     -- * Track management
     getTrackListing,
     getTrackToFile,
@@ -169,6 +172,21 @@ foreign import ccall unsafe "LIBMTP_Get_Deviceversion" c_getDeviceVersion
 
 foreign import ccall unsafe "LIBMTP_Get_Filelisting" c_getFileListing
     :: (Ptr MTPDevice) -> IO (Ptr File_t)
+
+foreign import ccall unsafe "LIBMTP_Get_File_To_File" c_getFileToFile
+    :: (Ptr MTPDevice)
+    -> CInt
+    -> CString
+    -> Ptr ()
+    -> Ptr ()
+    -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Send_File_From_File" c_sendFileFromFile
+    :: (Ptr MTPDevice)
+    -> CString
+    -> Ptr ()
+    -> Ptr ()
+    -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Get_Tracklisting" c_getTrackListing
     :: (Ptr MTPDevice) -> IO (Ptr Track_t)
@@ -330,6 +348,20 @@ getFileListing h = withMTPHandle h $ \ptr -> do
                           , fileSize = fromIntegral (ft_filesize ft)
                           , fileType = fromIntegral (ft_filetype ft)
                           }
+
+-- | Copy a file from the device to a local file.
+getFileToFile :: MTPHandle -> Int -> FilePath -> IO CInt
+getFileToFile h i n =
+    withMTPHandle h $ \devptr ->
+    withCAString n $ \str_ptr ->
+        c_getFileToFile devptr (fromIntegral i) str_ptr nullPtr nullPtr
+
+-- | Send a local file to the device.
+sendFileFromFile :: MTPHandle -> FilePath -> IO CInt
+sendFileFromFile h n =
+    withMTPHandle h $ \devptr ->
+    withCAString n $ \str_ptr ->
+        c_sendFileFromFile devptr str_ptr nullPtr nullPtr
 
 -- | Get a list of all tracks stored on the device.
 getTrackListing :: MTPHandle -> IO [Track]
