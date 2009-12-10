@@ -1,0 +1,22 @@
+name: mtp
+version: 0.0.0.0
+license: LGPL
+license-file: COPYING
+copyright: Joachim Fasting 2009
+author: Joachim Fasting
+maintainer: Joachim Fasting <joachim.fasting@gmail.com>
+category:
+synopsis: Bindings to libmtp
+description:
+        A FFI binding to libmtp
+        See <http://libmtp.sourceforge.net> for more information on the
+        libmtp library.
+build-type: Simple
+cabal-version: >= 1.2
+
+library
+        exposed-modules: MTP
+        build-depends: base ==4.*
+        extensions: ForeignFunctionInterface, CPP, EmptyDataDecls
+        includes: libmtp.h
+        extra-libraries: mtp
