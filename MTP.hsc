@@ -19,6 +19,7 @@ module MTP (
     getFileToFile,
     sendFileFromFile,
     -- * Track management
+    doesTrackExist,
     getTrackListing,
     getTrackToFile,
     sendTrackFromFile
@@ -231,6 +232,11 @@ foreign import ccall unsafe "LIBMTP_Get_Filelisting_With_Callback" c_getFileList
     -> Ptr Data
     -> IO (Ptr File_t)
 
+foreign import ccall unsafe "LIBMTP_Track_Exists" c_track_exists
+    :: Ptr MTPDevice
+    -> CInt
+    -> IO CInt
+
 foreign import ccall unsafe "LIBMTP_Get_File_To_File" c_getFileToFile
     :: (Ptr MTPDevice)
     -> CInt
@@ -388,6 +394,12 @@ getDeviceVersion :: MTPHandle -> IO String
 getDeviceVersion h = withMTPHandle h $ \ptr -> do
    v <- c_getDeviceVersion ptr
    peekCString v
+
+-- | Test whether a track exists on the device.
+doesTrackExist :: MTPHandle -> Int -> IO Bool
+doesTrackExist h i = withMTPHandle h $ \devptr -> do
+    exists <- c_track_exists devptr (fromIntegral i)
+    return $ exists /= 0
 
 -- | Get a list of all files stored on the device.
 getFileListing :: MTPHandle -> IO [File]
