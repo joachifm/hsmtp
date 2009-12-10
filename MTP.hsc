@@ -225,8 +225,11 @@ foreign import ccall unsafe "LIBMTP_Release_Device" c_releaseDevice
 foreign import ccall unsafe "LIBMTP_Get_Deviceversion" c_getDeviceVersion
     :: (Ptr MTPDevice) -> IO CString
 
-foreign import ccall unsafe "LIBMTP_Get_Filelisting" c_getFileListing
-    :: (Ptr MTPDevice) -> IO (Ptr File_t)
+foreign import ccall unsafe "LIBMTP_Get_Filelisting_With_Callback" c_getFileListing
+    :: (Ptr MTPDevice)
+    -> Ptr Callback
+    -> Ptr Data
+    -> IO (Ptr File_t)
 
 foreign import ccall unsafe "LIBMTP_Get_File_To_File" c_getFileToFile
     :: (Ptr MTPDevice)
@@ -243,8 +246,11 @@ foreign import ccall unsafe "LIBMTP_Send_File_From_File" c_sendFileFromFile
     -> Ptr Data
     -> IO CInt
 
-foreign import ccall unsafe "LIBMTP_Get_Tracklisting" c_getTrackListing
-    :: (Ptr MTPDevice) -> IO (Ptr Track_t)
+foreign import ccall unsafe "LIBMTP_Get_Tracklisting_With_Callback" c_getTrackListing
+    :: (Ptr MTPDevice)
+    -> Ptr Callback
+    -> Ptr Data
+    -> IO (Ptr Track_t)
 
 foreign import ccall unsafe "LIBMTP_Get_Track_To_File" c_getTrackToFile
     :: (Ptr MTPDevice)
@@ -386,7 +392,7 @@ getDeviceVersion h = withMTPHandle h $ \ptr -> do
 -- | Get a list of all files stored on the device.
 getFileListing :: MTPHandle -> IO [File]
 getFileListing h = withMTPHandle h $ \ptr -> do
-    toList [] =<< c_getFileListing ptr
+    toList [] =<< c_getFileListing ptr nullPtr nullPtr
     where
         toList acc p = do
             if p == nullPtr
@@ -423,7 +429,7 @@ sendFileFromFile h n =
 -- | Get a list of all tracks stored on the device.
 getTrackListing :: MTPHandle -> IO [Track]
 getTrackListing h = withMTPHandle h $ \ptr -> do
-    toList [] =<< c_getTrackListing ptr
+    toList [] =<< c_getTrackListing ptr nullPtr nullPtr
     where
         toList acc p = do
             if p == nullPtr
