@@ -370,7 +370,7 @@ data Track = Track
 
 -- | A handle to an MTP device connection.
 data MTPHandle = MTPHandle !(ForeignPtr MTPDevice)
-    deriving (Eq, Ord, Show)
+    deriving (Eq, Show)
 
 -- A helper that lifts operations on MTPDevice into MTPHandle
 withMTPHandle :: MTPHandle -> (Ptr MTPDevice -> IO a) -> IO a
