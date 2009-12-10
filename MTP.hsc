@@ -11,7 +11,7 @@ module MTP (
     firmware, aac, mediacard, flac, mp2, m4a, doc, xml, xls, ppt, mht, jp2,
     unknown,
     -- * Device management
-    getFirstDevice, releaseDevice,
+    getFirstDevice, releaseDevice, resetDevice,
     withFirstDevice,
     getDeviceVersion,
     -- * File management
@@ -224,6 +224,10 @@ foreign import ccall unsafe "LIBMTP_Get_First_Device" c_getFirstDevice
 foreign import ccall unsafe "LIBMTP_Release_Device" c_releaseDevice
     :: (Ptr MTPDevice) -> IO ()
 
+foreign import ccall unsafe "LIBMTP_Reset_Device" c_reset_device
+    :: Ptr MTPDevice
+    -> IO CInt
+
 foreign import ccall unsafe "LIBMTP_Get_Deviceversion" c_getDeviceVersion
     :: (Ptr MTPDevice) -> IO CString
 
@@ -394,6 +398,10 @@ getFirstDevice = do
 -- | Close connection to a MTP device.
 releaseDevice :: MTPHandle -> IO ()
 releaseDevice h = withMTPHandle h c_releaseDevice
+
+-- | Reset device.
+resetDevice :: MTPHandle -> IO CInt
+resetDevice h = withMTPHandle h c_reset_device
 
 -- | Get device hardware and firmware version.
 getDeviceVersion :: MTPHandle -> IO String
