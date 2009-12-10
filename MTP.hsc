@@ -368,9 +368,11 @@ getFirstDevice = do
     if devptr == nullPtr
        then throw NoDevice
        else do
+           -- XXX: running this finalizer causes a segmentation fault.
            dev <- newForeignPtr finalizerFree devptr
            return (MTPHandle dev)
 
+-- XXX: using the handle after running this causes a segmentation fault.
 -- | Close connection to a MTP device.
 releaseDevice :: MTPHandle -> IO ()
 releaseDevice h = withMTPHandle h c_releaseDevice
