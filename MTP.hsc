@@ -41,11 +41,7 @@ import Control.Exception
 import Control.Monad
 import Data.Typeable
 import Foreign
-import Foreign.C.Types
-import Foreign.C.String
-import Foreign.Ptr
-import Foreign.ForeignPtr
-import Foreign.Storable
+import Foreign.C
 
 #include <libmtp.h>
 
