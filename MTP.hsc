@@ -384,7 +384,7 @@ data MTPHandle = MTPHandle !(ForeignPtr MTPDevice)
 
 -- A helper that lifts operations on MTPDevice into MTPHandle
 withMTPHandle :: MTPHandle -> (Ptr MTPDevice -> IO a) -> IO a
-withMTPHandle (MTPHandle h) f = withForeignPtr h $ \devptr -> f devptr
+withMTPHandle (MTPHandle h) = withForeignPtr h
 
 -- Marshall a Track into a Track_t pointer using temporary storage.
 withTrackPtr :: Track -> (Ptr Track_t -> IO a) -> IO a
@@ -401,8 +401,8 @@ withTrackPtr t = bracket alloc free
                withCAString (trackGenre t) $ \genre_ptr ->
                withCAString (trackAlbum t) $ \album_ptr ->
                withCAString (trackDate t) $ \date_ptr ->
-               withCAString (trackFileName t) $ \filename_ptr -> do
-                   return $ Track_t
+               withCAString (trackFileName t) $ \filename_ptr ->
+                   return Track_t
                               { tt_item_id = fromIntegral (trackID t)
                               , tt_parent_id = fromIntegral (trackParentID t)
                               , tt_storage_id = fromIntegral (trackStorageID t)
@@ -440,22 +440,20 @@ dumpErrorStack h = withMTPHandle h c_dump_errorstack
 getErrorStack :: MTPHandle -> IO ()
 getErrorStack h = withMTPHandle h $ \devptr -> do
     e_ptr <- c_get_errorstack devptr
-    if e_ptr == nullPtr
-       then return ()
-       else do
-           et <- peek e_ptr
-           es <- peekCString (et_errortext et)
-           case et_errornumber et of
-               #{const LIBMTP_ERROR_GENERAL} -> throw $ General es
-               #{const LIBMTP_ERROR_NO_DEVICE_ATTACHED} -> throw NoDevice
-               #{const LIBMTP_ERROR_STORAGE_FULL} -> throw StorageFull
-               #{const LIBMTP_ERROR_CONNECTING} -> throw ConnectionFailed
-               #{const LIBMTP_ERROR_CANCELLED} -> throw Cancelled
-               _ -> undefined
+    unless (e_ptr == nullPtr) $ do
+        et <- peek e_ptr
+        es <- peekCString (et_errortext et)
+        case et_errornumber et of
+            #{const LIBMTP_ERROR_GENERAL} -> throw $ General es
+            #{const LIBMTP_ERROR_NO_DEVICE_ATTACHED} -> throw NoDevice
+            #{const LIBMTP_ERROR_STORAGE_FULL} -> throw StorageFull
+            #{const LIBMTP_ERROR_CONNECTING} -> throw ConnectionFailed
+            #{const LIBMTP_ERROR_CANCELLED} -> throw Cancelled
+            _ -> undefined
 
 -- | Clear the error stack.
 clearErrorStack :: MTPHandle -> IO ()
-clearErrorStack h = withMTPHandle h $ \devptr -> c_clear_errorstack devptr
+clearErrorStack h = withMTPHandle h c_clear_errorstack
 
 -- | Connect to the first available MTP device.
 getFirstDevice :: IO MTPHandle
@@ -482,9 +480,8 @@ resetDevice h = withMTPHandle h $ \devptr -> do
 
 -- | Get device hardware and firmware version.
 getDeviceVersion :: MTPHandle -> IO String
-getDeviceVersion h = withMTPHandle h $ \ptr -> do
-   v <- c_get_deviceversion ptr
-   peekCString v
+getDeviceVersion h = withMTPHandle h $ \ptr ->
+    peekCString =<< c_get_deviceversion ptr
 
 -- | Test whether a track exists on the device.
 doesTrackExist :: MTPHandle -> Int -> IO Bool
@@ -494,10 +491,10 @@ doesTrackExist h i = withMTPHandle h $ \devptr -> do
 
 -- | Get a list of all files stored on the device.
 getFileListing :: MTPHandle -> IO [File]
-getFileListing h = withMTPHandle h $ \ptr -> do
+getFileListing h = withMTPHandle h $ \ptr ->
     toList [] =<< c_get_filelisting ptr nullPtr nullPtr
     where
-        toList acc p = do
+        toList acc p =
             if p == nullPtr
                then return acc
                else do
@@ -507,13 +504,13 @@ getFileListing h = withMTPHandle h $ \ptr -> do
                    toList (fn : acc) (ft_next ft)
         convert ft = do
             n <- peekCString (ft_filename ft)
-            return $ File { fileID = fromIntegral (ft_item_id ft)
-                          , fileParentID = fromIntegral (ft_parent_id ft)
-                          , fileStorageID = fromIntegral (ft_storage_id ft)
-                          , fileName = n
-                          , fileSize = fromIntegral (ft_filesize ft)
-                          , fileType = FileType (ft_filetype ft)
-                          }
+            return File { fileID = fromIntegral (ft_item_id ft)
+                        , fileParentID = fromIntegral (ft_parent_id ft)
+                        , fileStorageID = fromIntegral (ft_storage_id ft)
+                        , fileName = n
+                        , fileSize = fromIntegral (ft_filesize ft)
+                        , fileType = FileType (ft_filetype ft)
+                        }
 
 -- | Copy a file from the device to a local file.
 getFileToFile :: MTPHandle -> Int -> FilePath -> IO ()
@@ -535,10 +532,10 @@ sendFileFromFile h n =
 
 -- | Get a list of all tracks stored on the device.
 getTrackListing :: MTPHandle -> IO [Track]
-getTrackListing h = withMTPHandle h $ \ptr -> do
+getTrackListing h = withMTPHandle h $ \ptr ->
     toList [] =<< c_get_tracklisting ptr nullPtr nullPtr
     where
-        toList acc p = do
+        toList acc p =
             if p == nullPtr
                then return acc
                else do
@@ -580,7 +577,7 @@ getTrackListing h = withMTPHandle h $ \ptr -> do
 
 -- | Copy a track from the device to a local file.
 getTrackToFile :: MTPHandle -> Int -> FilePath -> IO ()
-getTrackToFile h i n = withMTPHandle h $ \devptr -> do
+getTrackToFile h i n = withMTPHandle h $ \devptr ->
     withCAString n $ \strptr -> do
         r <- c_get_track_to_file devptr (fromIntegral i) strptr nullPtr nullPtr
         unless (r == 0) $
