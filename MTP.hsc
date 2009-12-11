@@ -443,6 +443,7 @@ getErrorStack h = withMTPHandle h $ \devptr -> do
     unless (e_ptr == nullPtr) $ do
         et <- peek e_ptr
         es <- peekCString (et_errortext et)
+        clearErrorStack h
         case et_errornumber et of
             #{const LIBMTP_ERROR_GENERAL} -> throw $ General es
             #{const LIBMTP_ERROR_NO_DEVICE_ATTACHED} -> throw NoDevice
