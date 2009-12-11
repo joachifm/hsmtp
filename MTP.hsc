@@ -525,11 +525,13 @@ getFileToFile h i n =
             getErrorStack h
 
 -- | Send a local file to the device.
-sendFileFromFile :: MTPHandle -> FilePath -> IO CInt
+sendFileFromFile :: MTPHandle -> FilePath -> IO ()
 sendFileFromFile h n =
     withMTPHandle h $ \devptr ->
-    withCAString n $ \str_ptr ->
-        c_send_file_from_file devptr str_ptr nullPtr nullPtr
+    withCAString n $ \str_ptr -> do
+        r <- c_send_file_from_file devptr str_ptr nullPtr nullPtr
+        unless (r == 0) $
+            getErrorStack h
 
 -- | Get a list of all tracks stored on the device.
 getTrackListing :: MTPHandle -> IO [Track]
