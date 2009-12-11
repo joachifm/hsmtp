@@ -23,7 +23,6 @@ module MTP (
     unknown,
     -- * Device management
     getFirstDevice, releaseDevice, resetDevice,
-    getErrorStack, clearErrorStack, dumpErrorStack,
     withFirstDevice,
     getDeviceVersion,
     -- * File management
@@ -268,10 +267,6 @@ foreign import ccall unsafe "LIBMTP_Clear_Errorstack" c_clear_errorstack
     :: Ptr MTPDevice
     -> IO ()
 
-foreign import ccall unsafe "LIBMTP_Dump_Errorstack" c_dump_errorstack
-    :: Ptr MTPDevice
-    -> IO ()
-
 foreign import ccall unsafe "LIBMTP_Get_Deviceversion" c_get_deviceversion
     :: (Ptr MTPDevice) -> IO CString
 
@@ -432,18 +427,15 @@ withTrackPtr t = bracket alloc free
 withFirstDevice :: (MTPHandle -> IO a) -> IO a
 withFirstDevice = bracket getFirstDevice releaseDevice
 
--- | Dump error stack to stderr.
-dumpErrorStack :: MTPHandle -> IO ()
-dumpErrorStack h = withMTPHandle h c_dump_errorstack
-
--- | Check the error stack and throw exception if there is an error.
+-- XXX: need a better name for this
+-- A helper that checks the error stack and throws an exception if there is an error.
 getErrorStack :: MTPHandle -> IO ()
 getErrorStack h = withMTPHandle h $ \devptr -> do
     e_ptr <- c_get_errorstack devptr
     unless (e_ptr == nullPtr) $ do
         et <- peek e_ptr
         es <- peekCString (et_errortext et)
-        clearErrorStack h
+        c_clear_errorstack devptr
         case et_errornumber et of
             #{const LIBMTP_ERROR_GENERAL} -> throw $ General es
             #{const LIBMTP_ERROR_NO_DEVICE_ATTACHED} -> throw NoDevice
@@ -451,10 +443,6 @@ getErrorStack h = withMTPHandle h $ \devptr -> do
             #{const LIBMTP_ERROR_CONNECTING} -> throw ConnectionFailed
             #{const LIBMTP_ERROR_CANCELLED} -> throw Cancelled
             _ -> undefined
-
--- | Clear the error stack.
-clearErrorStack :: MTPHandle -> IO ()
-clearErrorStack h = withMTPHandle h c_clear_errorstack
 
 -- | Connect to the first available MTP device.
 getFirstDevice :: IO MTPHandle
