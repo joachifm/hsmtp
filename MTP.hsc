@@ -508,8 +508,8 @@ getDeviceVersion :: MTPHandle -> IO String
 getDeviceVersion h = withMTPHandle h $ \ptr ->
     peekCString =<< c_get_deviceversion ptr
 
--- | Get battery level in percent.
-getBatteryLevel :: MTPHandle -> IO Double
+-- | Get battery level, maximum and current.
+getBatteryLevel :: MTPHandle -> IO (Int, Int)
 getBatteryLevel h = withMTPHandle h $ \devptr ->
     withIntPtr $ \maxptr ->
     withIntPtr $ \curptr -> do
@@ -517,7 +517,7 @@ getBatteryLevel h = withMTPHandle h $ \devptr ->
         unless (ret == 0) (getErrorStack h)
         maxv <- peek maxptr
         curv <- peek curptr
-        return $ (fromIntegral curv / fromIntegral maxv) * 100
+        return (fromIntegral maxv, fromIntegral curv)
     where
         withIntPtr = bracket (malloc :: IO (Ptr CInt)) free
 
