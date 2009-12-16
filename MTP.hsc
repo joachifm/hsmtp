@@ -24,7 +24,8 @@ module MTP (
     -- * Device management
     getFirstDevice, releaseDevice, resetDevice,
     withFirstDevice,
-    getDeviceVersion, getBatteryLevel,
+    getDeviceVersion, getManufacturerName, getModelName, getSerialNumber,
+    getFriendlyName, getBatteryLevel,
     -- * File management
     getFileListing,
     getFileToFile,
@@ -263,6 +264,18 @@ foreign import ccall unsafe "LIBMTP_Clear_Errorstack" c_clear_errorstack
     :: Ptr MTPDevice
     -> IO ()
 
+foreign import ccall unsafe "LIBMTP_Get_Manufacturername"
+    c_get_manufacturername :: Ptr MTPDevice -> IO CString
+
+foreign import ccall unsafe "LIBMTP_Get_Modelname"
+    c_get_modelname :: Ptr MTPDevice -> IO CString
+
+foreign import ccall unsafe "LIBMTP_Get_Serialnumber"
+    c_get_serialnumber :: Ptr MTPDevice -> IO CString
+
+foreign import ccall unsafe "LIBMTP_Get_Friendlyname"
+    c_get_friendlyname :: Ptr MTPDevice -> IO CString
+
 foreign import ccall unsafe "LIBMTP_Get_Deviceversion" c_get_deviceversion
     :: Ptr MTPDevice -> IO CString
 
@@ -469,6 +482,26 @@ resetDevice :: MTPHandle -> IO ()
 resetDevice h = withMTPHandle h $ \devptr -> do
     r <- c_reset_device devptr
     unless (r == 0) (getErrorStack h)
+
+-- | Get the device manufacturer name.
+getManufacturerName :: MTPHandle -> IO String
+getManufacturerName h = withMTPHandle h $ \devptr ->
+    peekCString =<< c_get_manufacturername devptr
+
+-- | Get the device model name.
+getModelName :: MTPHandle -> IO String
+getModelName h = withMTPHandle h $ \devptr ->
+   peekCString =<< c_get_modelname devptr
+
+-- | Get the device serial number.
+getSerialNumber :: MTPHandle -> IO String
+getSerialNumber h = withMTPHandle h $ \devptr ->
+  peekCString =<< c_get_serialnumber devptr
+
+-- | Get the owner string aka. the \"friendly name\".
+getFriendlyName :: MTPHandle -> IO String
+getFriendlyName h = withMTPHandle h $ \devptr ->
+   peekCString =<< c_get_friendlyname devptr
 
 -- | Get device hardware and firmware version.
 getDeviceVersion :: MTPHandle -> IO String
