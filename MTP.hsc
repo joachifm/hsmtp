@@ -27,9 +27,7 @@ module MTP (
     getDeviceVersion, getManufacturerName, getModelName, getSerialNumber,
     getFriendlyName, getBatteryLevel,
     -- * File management
-    getFileListing,
-    getFileToFile,
-    sendFileFromFile,
+    getFileListing, getFileToFile, sendFileFromFile, setFileName,
     -- * Track management
     doesTrackExist,
     getTrackListing,
@@ -339,6 +337,12 @@ foreign import ccall unsafe "LIBMTP_Send_File_From_File" c_send_file_from_file
     -> Ptr Data
     -> IO CInt
 
+foreign import ccall unsafe "LIBMTP_Set_File_Name" c_set_file_name
+    :: Ptr MTPDevice
+    -> Ptr File_t
+    -> CString
+    -> IO CInt
+
 foreign import ccall unsafe "LIBMTP_Get_Tracklisting_With_Callback" c_get_tracklisting
     :: Ptr MTPDevice
     -> Ptr Callback
@@ -544,6 +548,26 @@ getBatteryLevel h = withMTPHandle h $ \devptr ->
     where
         withIntPtr = bracket (malloc :: IO (Ptr CInt)) free
 
+-- Marshall a Track into a Track_t pointer using temporary storage.
+withFilePtr :: File -> (Ptr File_t -> IO a) -> IO a
+withFilePtr f = bracket alloc free
+    where
+        alloc = do
+            ptr <- malloc :: IO (Ptr File_t)
+            ft <- marshall
+            poke ptr ft
+            return ptr
+        marshall =
+            withCAString (fileName f) $ \name_ptr ->
+                return File_t { ft_item_id = fromIntegral (fileID f)
+                              , ft_parent_id = fromIntegral (fileParentID f)
+                              , ft_storage_id = fromIntegral (fileStorageID f)
+                              , ft_filename = name_ptr
+                              , ft_filesize = fromIntegral (fileSize f)
+                              , ft_filetype = unFileType (fileType f)
+                              , ft_next = nullPtr
+                              }
+
 -- | Get a list of all files stored on the device.
 getFileListing :: MTPHandle -> IO [File]
 getFileListing h = withMTPHandle h $ \ptr ->
@@ -581,6 +605,15 @@ sendFileFromFile h n =
     withMTPHandle h $ \devptr ->
     withCAString n $ \str_ptr -> do
         r <- c_send_file_from_file devptr str_ptr nullPtr nullPtr
+        unless (r == 0) (getErrorStack h)
+
+-- | Rename a file on the device.
+setFileName :: MTPHandle -> File -> String -> IO ()
+setFileName h f n =
+    withMTPHandle h $ \devptr ->
+    withFilePtr f $ \file_ptr ->
+    withCAString n $ \str_ptr -> do
+        r <- c_set_file_name devptr file_ptr str_ptr
         unless (r == 0) (getErrorStack h)
 
 -- Marshall a Track into a Track_t pointer using temporary storage.
