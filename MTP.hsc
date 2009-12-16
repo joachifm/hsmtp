@@ -457,7 +457,7 @@ getErrorStack h = withMTPHandle h $ \devptr -> do
             #{const LIBMTP_ERROR_STORAGE_FULL} -> throw StorageFull
             #{const LIBMTP_ERROR_CONNECTING} -> throw ConnectionFailed
             #{const LIBMTP_ERROR_CANCELLED} -> throw Cancelled
-            _ -> undefined
+            x -> error $ "getErrorStack: unhandled error number: " ++ show x
 
 -- | Connect to the first available MTP device.
 getFirstDevice :: IO MTPHandle
