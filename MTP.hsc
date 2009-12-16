@@ -392,6 +392,7 @@ data Track = Track
 data MTPHandle = MTPHandle !(ForeignPtr MTPDevice)
     deriving (Eq, Show)
 
+-- XXX: should check that the handle is usable
 -- A helper that lifts operations on MTPDevice into MTPHandle
 withMTPHandle :: MTPHandle -> (Ptr MTPDevice -> IO a) -> IO a
 withMTPHandle (MTPHandle h) = withForeignPtr h
@@ -475,7 +476,7 @@ getFirstDevice = do
 -- XXX: we should free the ptr, but it causes a double free error, WHY, OH WHY
 -- | Close connection to a MTP device.
 releaseDevice :: MTPHandle -> IO ()
-releaseDevice h = withMTPHandle h $ c_release_device
+releaseDevice h = withMTPHandle h c_release_device
 
 -- | Reset device.
 resetDevice :: MTPHandle -> IO ()
