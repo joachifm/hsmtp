@@ -249,7 +249,7 @@ foreign import ccall unsafe "LIBMTP_Get_First_Device" c_get_first_device
     :: IO (Ptr MTPDevice)
 
 foreign import ccall unsafe "LIBMTP_Release_Device" c_release_device
-    :: (Ptr MTPDevice) -> IO ()
+    :: Ptr MTPDevice -> IO ()
 
 foreign import ccall unsafe "LIBMTP_Reset_Device" c_reset_device
     :: Ptr MTPDevice
@@ -264,7 +264,7 @@ foreign import ccall unsafe "LIBMTP_Clear_Errorstack" c_clear_errorstack
     -> IO ()
 
 foreign import ccall unsafe "LIBMTP_Get_Deviceversion" c_get_deviceversion
-    :: (Ptr MTPDevice) -> IO CString
+    :: Ptr MTPDevice -> IO CString
 
 foreign import ccall unsafe "LIBMTP_Get_Batterylevel" c_get_batterylevel
     :: Ptr MTPDevice
@@ -273,7 +273,7 @@ foreign import ccall unsafe "LIBMTP_Get_Batterylevel" c_get_batterylevel
     -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Get_Filelisting_With_Callback" c_get_filelisting
-    :: (Ptr MTPDevice)
+    :: Ptr MTPDevice
     -> Ptr Callback
     -> Ptr Data
     -> IO (Ptr File_t)
@@ -284,7 +284,7 @@ foreign import ccall unsafe "LIBMTP_Track_Exists" c_track_exists
     -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Get_File_To_File" c_get_file_to_file
-    :: (Ptr MTPDevice)
+    :: Ptr MTPDevice
     -> CInt
     -> CString
     -> Ptr Callback
@@ -292,20 +292,20 @@ foreign import ccall unsafe "LIBMTP_Get_File_To_File" c_get_file_to_file
     -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Send_File_From_File" c_send_file_from_file
-    :: (Ptr MTPDevice)
+    :: Ptr MTPDevice
     -> CString
     -> Ptr Callback
     -> Ptr Data
     -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Get_Tracklisting_With_Callback" c_get_tracklisting
-    :: (Ptr MTPDevice)
+    :: Ptr MTPDevice
     -> Ptr Callback
     -> Ptr Data
     -> IO (Ptr Track_t)
 
 foreign import ccall unsafe "LIBMTP_Get_Track_To_File" c_get_track_to_file
-    :: (Ptr MTPDevice)
+    :: Ptr MTPDevice
     -> CInt
     -> CString
     -> Ptr Callback
@@ -313,7 +313,7 @@ foreign import ccall unsafe "LIBMTP_Get_Track_To_File" c_get_track_to_file
     -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Send_Track_From_File" c_send_track_from_file
-    :: (Ptr MTPDevice)
+    :: Ptr MTPDevice
     -> CString
     -> (Ptr Track_t)
     -> Ptr Callback
@@ -468,8 +468,7 @@ releaseDevice h = withMTPHandle h $ c_release_device
 resetDevice :: MTPHandle -> IO ()
 resetDevice h = withMTPHandle h $ \devptr -> do
     r <- c_reset_device devptr
-    unless (r == 0) $
-        getErrorStack h
+    unless (r == 0) (getErrorStack h)
 
 -- | Get device hardware and firmware version.
 getDeviceVersion :: MTPHandle -> IO String
@@ -524,8 +523,7 @@ getFileToFile h i n =
     withMTPHandle h $ \devptr ->
     withCAString n $ \str_ptr -> do
         r <- c_get_file_to_file devptr (fromIntegral i) str_ptr nullPtr nullPtr
-        unless (r == 0) $
-            getErrorStack h
+        unless (r == 0) (getErrorStack h)
 
 -- | Send a local file to the device.
 sendFileFromFile :: MTPHandle -> FilePath -> IO ()
@@ -533,8 +531,7 @@ sendFileFromFile h n =
     withMTPHandle h $ \devptr ->
     withCAString n $ \str_ptr -> do
         r <- c_send_file_from_file devptr str_ptr nullPtr nullPtr
-        unless (r == 0) $
-            getErrorStack h
+        unless (r == 0) (getErrorStack h)
 
 -- | Get a list of all tracks stored on the device.
 getTrackListing :: MTPHandle -> IO [Track]
@@ -586,21 +583,18 @@ getTrackToFile :: MTPHandle -> Int -> FilePath -> IO ()
 getTrackToFile h i n = withMTPHandle h $ \devptr ->
     withCAString n $ \strptr -> do
         r <- c_get_track_to_file devptr (fromIntegral i) strptr nullPtr nullPtr
-        unless (r == 0) $
-            getErrorStack h
+        unless (r == 0) (getErrorStack h)
 
 -- | Send a local file to the device, using the supplied metadata.
 sendTrackFromFile :: MTPHandle -> FilePath -> Track -> IO ()
 sendTrackFromFile h n t = withMTPHandle h $ \devptr ->
     withCAString n $ \strptr -> withTrackPtr t $ \tt_ptr -> do
         r <- c_send_track_from_file devptr strptr tt_ptr nullPtr nullPtr
-        unless (r == 0) $
-            getErrorStack h
+        unless (r == 0) (getErrorStack h)
 
 -- | Update track metadata.
 updateTrack :: MTPHandle -> Track -> IO ()
 updateTrack h t = withMTPHandle h $ \devptr ->
     withTrackPtr t $ \tt_ptr -> do
         r <- c_update_track_metadata devptr tt_ptr
-        unless (r == 0) $
-            getErrorStack h
+        unless (r == 0) (getErrorStack h)
