@@ -460,47 +460,6 @@ data MTPHandle = MTPHandle !(ForeignPtr MTPDevice)
 withMTPHandle :: MTPHandle -> (Ptr MTPDevice -> IO a) -> IO a
 withMTPHandle (MTPHandle h) = withForeignPtr h
 
--- Marshall a Track into a Track_t pointer using temporary storage.
-withTrackPtr :: Track -> (Ptr Track_t -> IO a) -> IO a
-withTrackPtr t = bracket alloc free
-    where
-        alloc = do
-            ptr <- malloc :: IO (Ptr Track_t)
-            tt <- conv
-            poke ptr tt
-            return ptr
-        conv = withCAString (trackTitle t) $ \title_ptr ->
-               withCAString (trackArtist t) $ \artist_ptr ->
-               withCAString (trackComposer t) $ \composer_ptr ->
-               withCAString (trackGenre t) $ \genre_ptr ->
-               withCAString (trackAlbum t) $ \album_ptr ->
-               withCAString (trackDate t) $ \date_ptr ->
-               withCAString (trackFileName t) $ \filename_ptr ->
-                   return Track_t
-                              { tt_item_id = fromIntegral (trackID t)
-                              , tt_parent_id = fromIntegral (trackParentID t)
-                              , tt_storage_id = fromIntegral (trackStorageID t)
-                              , tt_title = title_ptr
-                              , tt_artist = artist_ptr
-                              , tt_composer = composer_ptr
-                              , tt_genre = genre_ptr
-                              , tt_album = album_ptr
-                              , tt_date = date_ptr
-                              , tt_filename = filename_ptr
-                              , tt_tracknumber = fromIntegral (trackNumber t)
-                              , tt_duration = fromIntegral (trackDuration t)
-                              , tt_samplerate = fromIntegral (trackSamplerate t)
-                              , tt_nochannels = fromIntegral (trackChannels t)
-                              , tt_wavecodec = fromIntegral (trackWavecodec t)
-                              , tt_bitrate = fromIntegral (trackBitrate t)
-                              , tt_bitratetype = fromIntegral (trackBitrateType t)
-                              , tt_rating = fromIntegral (trackRating t)
-                              , tt_usecount = fromIntegral (trackUseCount t)
-                              , tt_filesize = fromIntegral (trackFileSize t)
-                              , tt_filetype = unFileType (trackFileType t)
-                              , tt_next = nullPtr
-                              }
-
 -- | Open a connection to the first available MTP device and run an
 -- action, closing the connection afterwards.
 withFirstDevice :: (MTPHandle -> IO a) -> IO a
@@ -585,12 +544,6 @@ getBatteryLevel h = withMTPHandle h $ \devptr ->
     where
         withIntPtr = bracket (malloc :: IO (Ptr CInt)) free
 
--- | Test whether a track exists on the device.
-doesTrackExist :: MTPHandle -> Int -> IO Bool
-doesTrackExist h i = withMTPHandle h $ \devptr -> do
-    exists <- c_track_exists devptr (fromIntegral i)
-    return $ exists /= 0
-
 -- | Get a list of all files stored on the device.
 getFileListing :: MTPHandle -> IO [File]
 getFileListing h = withMTPHandle h $ \ptr ->
@@ -629,6 +582,54 @@ sendFileFromFile h n =
     withCAString n $ \str_ptr -> do
         r <- c_send_file_from_file devptr str_ptr nullPtr nullPtr
         unless (r == 0) (getErrorStack h)
+
+-- Marshall a Track into a Track_t pointer using temporary storage.
+withTrackPtr :: Track -> (Ptr Track_t -> IO a) -> IO a
+withTrackPtr t = bracket alloc free
+    where
+        alloc = do
+            ptr <- malloc :: IO (Ptr Track_t)
+            tt <- marshall
+            poke ptr tt
+            return ptr
+        marshall =
+            withCAString (trackTitle t) $ \title_ptr ->
+            withCAString (trackArtist t) $ \artist_ptr ->
+            withCAString (trackComposer t) $ \composer_ptr ->
+            withCAString (trackGenre t) $ \genre_ptr ->
+            withCAString (trackAlbum t) $ \album_ptr ->
+            withCAString (trackDate t) $ \date_ptr ->
+            withCAString (trackFileName t) $ \filename_ptr ->
+                return Track_t
+                           { tt_item_id = fromIntegral (trackID t)
+                           , tt_parent_id = fromIntegral (trackParentID t)
+                           , tt_storage_id = fromIntegral (trackStorageID t)
+                           , tt_title = title_ptr
+                           , tt_artist = artist_ptr
+                           , tt_composer = composer_ptr
+                           , tt_genre = genre_ptr
+                           , tt_album = album_ptr
+                           , tt_date = date_ptr
+                           , tt_filename = filename_ptr
+                           , tt_tracknumber = fromIntegral (trackNumber t)
+                           , tt_duration = fromIntegral (trackDuration t)
+                           , tt_samplerate = fromIntegral (trackSamplerate t)
+                           , tt_nochannels = fromIntegral (trackChannels t)
+                           , tt_wavecodec = fromIntegral (trackWavecodec t)
+                           , tt_bitrate = fromIntegral (trackBitrate t)
+                           , tt_bitratetype = fromIntegral (trackBitrateType t)
+                           , tt_rating = fromIntegral (trackRating t)
+                           , tt_usecount = fromIntegral (trackUseCount t)
+                           , tt_filesize = fromIntegral (trackFileSize t)
+                           , tt_filetype = unFileType (trackFileType t)
+                           , tt_next = nullPtr
+                           }
+
+-- | Test whether a track exists on the device.
+doesTrackExist :: MTPHandle -> Int -> IO Bool
+doesTrackExist h i = withMTPHandle h $ \devptr -> do
+    exists <- c_track_exists devptr (fromIntegral i)
+    return $ exists /= 0
 
 -- | Get a list of all tracks stored on the device.
 getTrackListing :: MTPHandle -> IO [Track]
@@ -702,20 +703,21 @@ withPlaylistPtr pl = bracket alloc free
     where
         alloc = do
             ptr <- malloc :: IO (Ptr Playlist_t)
-            pt <- convert
+            pt <- marshall
             poke ptr pt
             return ptr
-        convert = withCAString (playlistName pl) $ \name_ptr ->
-                  withArray (map fromIntegral (playlistTracks pl)) $ \tracks_ptr ->
-                      return Playlist_t
-                                 { pt_playlist_id = fromIntegral (playlistID pl)
-                                 , pt_parent_id = fromIntegral (playlistParentID pl)
-                                 , pt_storage_id = fromIntegral (playlistStorageID pl)
-                                 , pt_name = name_ptr
-                                 , pt_tracks = tracks_ptr
-                                 , pt_no_tracks = fromIntegral (playlistNoTracks pl)
-                                 , pt_next = nullPtr
-                                 }
+        marshall =
+            withCAString (playlistName pl) $ \name_ptr ->
+            withArray (map fromIntegral (playlistTracks pl)) $ \tracks_ptr ->
+                return Playlist_t
+                           { pt_playlist_id = fromIntegral (playlistID pl)
+                           , pt_parent_id = fromIntegral (playlistParentID pl)
+                           , pt_storage_id = fromIntegral (playlistStorageID pl)
+                           , pt_name = name_ptr
+                           , pt_tracks = tracks_ptr
+                           , pt_no_tracks = fromIntegral (playlistNoTracks pl)
+                           , pt_next = nullPtr
+                           }
 
 peekPlaylist :: Ptr Playlist_t -> IO [Playlist]
 peekPlaylist = go []
