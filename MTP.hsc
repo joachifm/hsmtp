@@ -12,7 +12,7 @@
 
 module MTP (
     -- * Types
-    MTPHandle, Track(..), File(..), FileType,
+    MTPHandle, Track(..), File(..), Playlist(..), FileType,
     MTPException(..),
     -- * Constants
     version,
@@ -35,7 +35,10 @@ module MTP (
     getTrackListing,
     getTrackToFile,
     sendTrackFromFile,
-    updateTrack
+    updateTrack,
+    -- * Audio\/video playlist management
+    getPlaylistList, getPlaylist, createPlaylist, updatePlaylist,
+    setPlaylistName
     ) where
 
 import Control.Exception
@@ -242,6 +245,31 @@ instance Storable Track_t where
         #{poke LIBMTP_track_t, filetype} ptr (tt_filetype tt)
         #{poke LIBMTP_track_t, next} ptr (tt_next tt)
 
+-- An intermediate structure for the LIBMTP_playlist_t struct.
+-- We need this because LIBMTP_playlist_t is recursive.
+data Playlist_t = Playlist_t
+    { pt_playlist_id :: CInt
+    , pt_parent_id :: CInt
+    , pt_storage_id :: CInt
+    , pt_name :: CString
+    , pt_tracks :: Ptr CInt
+    , pt_no_tracks :: CInt
+    , pt_next :: Ptr Playlist_t
+    }
+
+instance Storable Playlist_t where
+    sizeOf _ = #{size LIBMTP_playlist_t}
+    alignment = sizeOf
+    peek ptr = do
+        plid <- #{peek LIBMTP_playlist_t, playlist_id} ptr
+        pid <- #{peek LIBMTP_playlist_t, parent_id} ptr
+        sid <- #{peek LIBMTP_playlist_t, storage_id} ptr
+        name <- #{peek LIBMTP_playlist_t, name} ptr
+        tracks <- #{peek LIBMTP_playlist_t, tracks} ptr
+        ntracks <- #{peek LIBMTP_playlist_t, no_tracks} ptr
+        next <- #{peek LIBMTP_playlist_t, next} ptr
+        return $ Playlist_t plid pid sid name tracks ntracks next
+
 ------------------------------------------------------------------------------
 -- Foreign imports
 ------------------------------------------------------------------------------
@@ -338,6 +366,31 @@ foreign import ccall unsafe "LIBMTP_Update_Track_Metadata"
                             -> Ptr Track_t
                             -> IO CInt
 
+foreign import ccall unsafe "LIBMTP_Get_Playlist_List"
+    c_get_playlist_list :: Ptr MTPDevice
+                        -> IO (Ptr Playlist_t)
+
+foreign import ccall unsafe "LIBMTP_Get_Playlist"
+    c_get_playlist :: Ptr MTPDevice
+                   -> CInt
+                   -> IO (Ptr Playlist_t)
+
+foreign import ccall unsafe "LIBMTP_Create_New_Playlist"
+    c_create_new_playlist :: Ptr MTPDevice
+                          -> Ptr Playlist_t
+                          -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Update_Playlist"
+    c_update_playlist :: Ptr MTPDevice
+                      -> Ptr Playlist_t
+                      -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Set_Playlist_Name"
+    c_set_playlist_name :: Ptr MTPDevice
+                        -> Ptr Playlist_t
+                        -> CString
+                        -> IO CInt
+
 ------------------------------------------------------------------------------
 -- High-level interface
 ------------------------------------------------------------------------------
@@ -386,6 +439,16 @@ data Track = Track
     , trackUseCount :: Int
     , trackFileSize :: Integer
     , trackFileType :: FileType
+    } deriving (Eq, Show)
+
+-- | Playlist metadata
+data Playlist = Playlist
+    { playlistID :: Int
+    , playlistParentID :: Int
+    , playlistStorageID :: Int
+    , playlistName :: String
+    , playlistTracks :: [Int]
+    , playlistNoTracks :: Int
     } deriving (Eq, Show)
 
 -- | A handle to an MTP device connection.
@@ -631,4 +694,80 @@ updateTrack :: MTPHandle -> Track -> IO ()
 updateTrack h t = withMTPHandle h $ \devptr ->
     withTrackPtr t $ \tt_ptr -> do
         r <- c_update_track_metadata devptr tt_ptr
+        unless (r == 0) (getErrorStack h)
+
+-- Marshall a Playlist into a Playlist_t pointer using temporary storage.
+withPlaylistPtr :: Playlist -> (Ptr Playlist_t -> IO a) -> IO a
+withPlaylistPtr pl = bracket alloc free
+    where
+        alloc = do
+            ptr <- malloc :: IO (Ptr Playlist_t)
+            pt <- convert
+            poke ptr pt
+            return ptr
+        convert = withCAString (playlistName pl) $ \name_ptr ->
+                  withArray (map fromIntegral (playlistTracks pl)) $ \tracks_ptr ->
+                      return Playlist_t
+                                 { pt_playlist_id = fromIntegral (playlistID pl)
+                                 , pt_parent_id = fromIntegral (playlistParentID pl)
+                                 , pt_storage_id = fromIntegral (playlistStorageID pl)
+                                 , pt_name = name_ptr
+                                 , pt_tracks = tracks_ptr
+                                 , pt_no_tracks = fromIntegral (playlistNoTracks pl)
+                                 , pt_next = nullPtr
+                                 }
+
+peekPlaylist :: Ptr Playlist_t -> IO [Playlist]
+peekPlaylist = go []
+    where
+        go acc p =
+            if p == nullPtr
+               then return acc
+               else do
+                   pt <- peek p
+                   pn <- convert pt
+                   free p
+                   go (pn : acc) (pt_next pt)
+        convert pt = do
+            name <- peekCString (pt_name pt)
+            let no_tracks = fromIntegral (pt_no_tracks pt)
+            tracks <- peekArray no_tracks (pt_tracks pt)
+            return $! Playlist { playlistID = fromIntegral (pt_playlist_id pt)
+                               , playlistParentID = fromIntegral (pt_parent_id pt)
+                               , playlistStorageID = fromIntegral (pt_storage_id pt)
+                               , playlistName = name
+                               , playlistTracks = map fromIntegral tracks
+                               , playlistNoTracks = no_tracks }
+
+-- | Get a list of playlists on the device.
+getPlaylistList :: MTPHandle -> IO [Playlist]
+getPlaylistList h = withMTPHandle h $ \devptr ->
+    peekPlaylist =<< c_get_playlist_list devptr
+
+-- | Get a single playlist by ID.
+getPlaylist :: MTPHandle -> Int -> IO Playlist
+getPlaylist h plid = withMTPHandle h $ \devptr -> do
+    [r] <- peekPlaylist =<< c_get_playlist devptr (fromIntegral plid)
+    return r
+
+-- | Create a new playlist using the metadata supplied.
+createPlaylist :: MTPHandle -> Playlist -> IO ()
+createPlaylist h pl = withMTPHandle h $ \devptr ->
+    withPlaylistPtr pl $ \plptr -> do
+        r <- c_create_new_playlist devptr plptr
+        unless (r == 0) (getErrorStack h)
+
+-- | Update an existing playlist.
+updatePlaylist :: MTPHandle -> Playlist -> IO ()
+updatePlaylist h pl = withMTPHandle h $ \devptr ->
+    withPlaylistPtr pl $ \plptr -> do
+        r <- c_update_playlist devptr plptr
+        unless (r == 0) (getErrorStack h)
+
+-- | Rename an existing playlist. The expected name suffix is \".pla\".
+setPlaylistName :: MTPHandle -> Playlist -> String -> IO ()
+setPlaylistName h pl name = withMTPHandle h $ \devptr ->
+    withPlaylistPtr pl $ \plptr ->
+    withCAString name $ \nameptr -> do
+        r <- c_set_playlist_name devptr plptr nameptr
         unless (r == 0) (getErrorStack h)
