@@ -24,7 +24,7 @@ module MTP (
     -- * Device management
     getFirstDevice, releaseDevice, resetDevice,
     withFirstDevice,
-    getDeviceVersion,
+    getDeviceVersion, getBatteryLevel,
     -- * File management
     getFileListing,
     getFileToFile,
@@ -266,6 +266,12 @@ foreign import ccall unsafe "LIBMTP_Clear_Errorstack" c_clear_errorstack
 foreign import ccall unsafe "LIBMTP_Get_Deviceversion" c_get_deviceversion
     :: (Ptr MTPDevice) -> IO CString
 
+foreign import ccall unsafe "LIBMTP_Get_Batterylevel" c_get_batterylevel
+    :: Ptr MTPDevice
+    -> Ptr CInt
+    -> Ptr CInt
+    -> IO CInt
+
 foreign import ccall unsafe "LIBMTP_Get_Filelisting_With_Callback" c_get_filelisting
     :: (Ptr MTPDevice)
     -> Ptr Callback
@@ -469,6 +475,19 @@ resetDevice h = withMTPHandle h $ \devptr -> do
 getDeviceVersion :: MTPHandle -> IO String
 getDeviceVersion h = withMTPHandle h $ \ptr ->
     peekCString =<< c_get_deviceversion ptr
+
+-- | Get battery level in percent.
+getBatteryLevel :: MTPHandle -> IO Double
+getBatteryLevel h = withMTPHandle h $ \devptr ->
+    withIntPtr $ \maxptr ->
+    withIntPtr $ \curptr -> do
+        ret <- c_get_batterylevel devptr maxptr curptr
+        unless (ret == 0) (getErrorStack h)
+        maxv <- peek maxptr
+        curv <- peek curptr
+        return $ (fromIntegral curv / fromIntegral maxv) * 100
+    where
+        withIntPtr = bracket (malloc :: IO (Ptr CInt)) free
 
 -- | Test whether a track exists on the device.
 doesTrackExist :: MTPHandle -> Int -> IO Bool
