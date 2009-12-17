@@ -41,6 +41,7 @@ module MTP (
 
 import Control.Exception
 import Control.Monad
+import Data.Maybe
 import Data.Typeable
 import Foreign
 import Foreign.C
@@ -803,10 +804,10 @@ getPlaylistList h = withMTPHandle h $ \devptr ->
     peekPlaylist =<< c_get_playlist_list devptr
 
 -- | Get a single playlist by ID.
-getPlaylist :: MTPHandle -> Int -> IO Playlist
+getPlaylist :: MTPHandle -> Int -> IO (Maybe Playlist)
 getPlaylist h plid = withMTPHandle h $ \devptr -> do
-    [r] <- peekPlaylist =<< c_get_playlist devptr (fromIntegral plid)
-    return r
+    r <- peekPlaylist =<< c_get_playlist devptr (fromIntegral plid)
+    return $ listToMaybe r
 
 -- | Create a new playlist using the metadata supplied.
 createPlaylist :: MTPHandle -> Playlist -> IO ()
