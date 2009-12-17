@@ -25,7 +25,7 @@ module MTP (
     getFirstDevice, releaseDevice, resetDevice,
     withFirstDevice,
     getDeviceVersion, getManufacturerName, getModelName, getSerialNumber,
-    getFriendlyName, getBatteryLevel,
+    getFriendlyName, getBatteryLevel, getSupportedFileTypes,
     -- * File management
     getFileListing, getFileToFile, sendFileFromFile, setFileName,
     -- * Track management
@@ -311,6 +311,12 @@ foreign import ccall unsafe "LIBMTP_Get_Batterylevel" c_get_batterylevel
     -> Ptr CInt
     -> IO CInt
 
+foreign import ccall unsafe "LIBMTP_Get_Supported_Filetypes"
+    c_get_supported_filetypes :: Ptr MTPDevice
+                              -> Ptr CInt
+                              -> Ptr CInt
+                              -> IO CInt
+
 foreign import ccall unsafe "LIBMTP_Get_Filelisting_With_Callback" c_get_filelisting
     :: Ptr MTPDevice
     -> Ptr Callback
@@ -535,6 +541,10 @@ getDeviceVersion :: MTPHandle -> IO String
 getDeviceVersion h = withMTPHandle h $ \ptr ->
     peekCString =<< c_get_deviceversion ptr
 
+-- Create a temporary pointer to a CInt.
+withIntPtr :: (Ptr CInt -> IO a) -> IO a
+withIntPtr = bracket (malloc :: IO (Ptr CInt)) free
+
 -- | Get battery level, maximum and current.
 getBatteryLevel :: MTPHandle -> IO (Int, Int)
 getBatteryLevel h = withMTPHandle h $ \devptr ->
@@ -545,8 +555,16 @@ getBatteryLevel h = withMTPHandle h $ \devptr ->
         maxv <- peek maxptr
         curv <- peek curptr
         return (fromIntegral maxv, fromIntegral curv)
-    where
-        withIntPtr = bracket (malloc :: IO (Ptr CInt)) free
+
+-- | Get a list of supported file types.
+getSupportedFileTypes :: MTPHandle -> IO [FileType]
+getSupportedFileTypes h = withMTPHandle h $ \devptr ->
+    withIntPtr $ \ft_ptr ->
+    withIntPtr $ \len_ptr -> do
+        r <- c_get_supported_filetypes devptr ft_ptr len_ptr
+        unless (r == 0) (getErrorStack h)
+        len <- peek len_ptr
+        map FileType `fmap` peekArray (fromIntegral len) ft_ptr
 
 -- Marshall a Track into a Track_t pointer using temporary storage.
 withFilePtr :: File -> (Ptr File_t -> IO a) -> IO a
