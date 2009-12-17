@@ -18,7 +18,7 @@ cabal-version: >= 1.2
 
 library
         exposed-modules: MTP
-        build-depends: base ==4.*
+        build-depends: base ==4.*, unix ==2.*
         extensions: ForeignFunctionInterface, CPP, EmptyDataDecls
         includes: libmtp.h
         extra-libraries: mtp
