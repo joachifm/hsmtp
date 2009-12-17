@@ -39,6 +39,7 @@ module MTP (
     getTrack,
     sendTrack,
     updateTrack,
+    getTrackMetadata,
     -- * Audio\/video playlist management
     getPlaylistList, getPlaylist, createPlaylist, updatePlaylist,
     setPlaylistName
@@ -413,6 +414,11 @@ foreign import ccall unsafe "LIBMTP_Send_Track_From_File" c_send_track_from_file
     -> Ptr Data
     -> IO CInt
 
+foreign import ccall unsafe "LIBMTP_Get_Trackmetadata"
+    c_get_trackmetadata :: Ptr MTPDevice
+                        -> CInt
+                        -> IO (Ptr Track_t)
+
 foreign import ccall unsafe "LIBMTP_Update_Track_Metadata"
     c_update_track_metadata :: Ptr MTPDevice
                             -> Ptr Track_t
@@ -749,20 +755,17 @@ doesTrackExist h i = withMTPHandle h $ \devptr -> do
     exists <- c_track_exists devptr (fromIntegral i)
     return $ exists /= 0
 
--- | Get a list of all tracks stored on the device.
-getTrackListing :: MTPHandle -> IO [Track]
-getTrackListing h = withMTPHandle h $ \ptr ->
-    toList [] =<< c_get_tracklisting ptr nullPtr nullPtr
+peekTrack :: Ptr Track_t -> IO [Track]
+peekTrack = go []
     where
-        toList acc p =
+        go acc p =
             if p == nullPtr
                then return acc
                else do
                    tt <- peek p
                    tn <- convert tt
                    free p
-                   toList (tn : acc) (tt_next tt)
-        convert :: Track_t -> IO Track
+                   go (tn : acc) (tt_next tt)
         convert tt = do
             ti <- peekCString (tt_title tt)
             ar <- peekCString (tt_artist tt)
@@ -794,6 +797,11 @@ getTrackListing h = withMTPHandle h $ \ptr ->
                             , trackFileType = FileType (tt_filetype tt)
                             }
 
+-- | Get a list of all tracks stored on the device.
+getTrackListing :: MTPHandle -> IO [Track]
+getTrackListing h = withMTPHandle h $ \ptr ->
+    peekTrack =<< c_get_tracklisting ptr nullPtr nullPtr
+
 -- | Copy a track from the device to a local file.
 getTrack :: MTPHandle -> Int -> FilePath -> IO ()
 getTrack h i n = withMTPHandle h $ \devptr ->
@@ -814,6 +822,12 @@ updateTrack h t = withMTPHandle h $ \devptr ->
     withTrackPtr t $ \tt_ptr -> do
         r <- c_update_track_metadata devptr tt_ptr
         unless (r == 0) (getErrorStack h)
+
+-- | Get metadata for a single track.
+getTrackMetadata :: MTPHandle -> Int -> IO (Maybe Track)
+getTrackMetadata h i = withMTPHandle h $ \devptr -> do
+    r <- peekTrack =<< c_get_trackmetadata devptr (fromIntegral i)
+    return $ listToMaybe r
 
 -- Marshall a Playlist into a Playlist_t pointer using temporary storage.
 withPlaylistPtr :: Playlist -> (Ptr Playlist_t -> IO a) -> IO a
