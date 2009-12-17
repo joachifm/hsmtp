@@ -41,6 +41,7 @@ module MTP (
     hGetTrack, hSendTrack,
     updateTrack,
     getTrackMetadata,
+    setTrackName,
     -- * Audio\/video playlist management
     getPlaylistList, getPlaylist, createPlaylist, updatePlaylist,
     setPlaylistName
@@ -440,6 +441,12 @@ foreign import ccall unsafe "LIBMTP_Update_Track_Metadata"
     c_update_track_metadata :: Ptr MTPDevice
                             -> Ptr Track_t
                             -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Set_Track_Name" c_set_track_name
+    :: Ptr MTPDevice
+    -> Ptr Track_t
+    -> CString
+    -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Get_Playlist_List"
     c_get_playlist_list :: Ptr MTPDevice
@@ -865,6 +872,14 @@ getTrackMetadata :: MTPHandle -> Int -> IO (Maybe Track)
 getTrackMetadata h i = withMTPHandle h $ \devptr -> do
     r <- peekTrack =<< c_get_trackmetadata devptr (fromIntegral i)
     return $ listToMaybe r
+
+-- | Rename a single track.
+setTrackName :: MTPHandle -> Track -> String -> IO ()
+setTrackName h t n = withMTPHandle h $ \devptr ->
+    withTrackPtr t $ \track_ptr ->
+    withCAString n $ \name_ptr -> do
+        r <- c_set_track_name devptr track_ptr name_ptr
+        unless (r == 0) (getErrorStack h)
 
 -- Marshall a Playlist into a Playlist_t pointer using temporary storage.
 withPlaylistPtr :: Playlist -> (Ptr Playlist_t -> IO a) -> IO a
