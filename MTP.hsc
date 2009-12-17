@@ -267,6 +267,14 @@ instance Storable Playlist_t where
         ntracks <- #{peek LIBMTP_playlist_t, no_tracks} ptr
         next <- #{peek LIBMTP_playlist_t, next} ptr
         return $ Playlist_t plid pid sid name tracks ntracks next
+    poke ptr pt = do
+        #{poke LIBMTP_playlist_t, playlist_id} ptr (pt_playlist_id pt)
+        #{poke LIBMTP_playlist_t, parent_id} ptr (pt_parent_id pt)
+        #{poke LIBMTP_playlist_t, storage_id} ptr (pt_storage_id pt)
+        #{poke LIBMTP_playlist_t, name} ptr (pt_name pt)
+        #{poke LIBMTP_playlist_t, tracks} ptr (pt_tracks pt)
+        #{poke LIBMTP_playlist_t, no_tracks} ptr (pt_no_tracks pt)
+        #{poke LIBMTP_playlist_t, next} ptr (pt_next pt)
 
 ------------------------------------------------------------------------------
 -- Foreign imports
