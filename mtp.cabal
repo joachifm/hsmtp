@@ -16,6 +16,10 @@ extra-source-files: README.md
 build-type: Simple
 cabal-version: >= 1.2
 
+source-repository head
+      type: git
+      location: git://github.com/joachifm/hsmtp.git
+
 library
         exposed-modules: MTP
         build-depends: base ==4.*, unix ==2.*
