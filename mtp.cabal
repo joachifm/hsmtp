@@ -8,9 +8,10 @@ maintainer: Joachim Fasting <joachim.fasting@gmail.com>
 category:
 synopsis: Bindings to libmtp
 description:
-        A FFI binding to libmtp
-        See <http://libmtp.sourceforge.net> for more information on the
-        libmtp library.
+        A FFI binding to libmtp, an implementation of the Media Transfer
+        Protocol.
+        .
+        See <http://libmtp.sourceforge.net> for more information.
 extra-source-files: README.md
 build-type: Simple
 cabal-version: >= 1.2

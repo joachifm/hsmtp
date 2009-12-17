@@ -9,6 +9,8 @@
 -- Maintainer  : Joachim Fasting <joachim.fasting@gmail.com>
 -- Stability   : unstable
 -- Portability : not portable
+--
+-- Bindings to libmtp.
 
 module MTP (
     -- * Types

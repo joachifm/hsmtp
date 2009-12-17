@@ -1,5 +1,5 @@
 # About
-A FFI binding to [libmtp].
+A FFI binding to [libmtp], an implementation of the Media Transfer Protocol.
 
 [libmtp]: http://libmtp.sourceforge.net
 
