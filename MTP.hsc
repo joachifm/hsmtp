@@ -30,14 +30,14 @@ module MTP (
     getFriendlyName, getBatteryLevel, getSupportedFileTypes,
     -- * File management
     getFileListing,
-    getFileToFile, hGetFileToFile,
-    sendFileFromFile, hSendFileFromFile,
+    getFile, sendFile,
+    hGetFile, hSendFile,
     setFileName,
     -- * Track management
     doesTrackExist,
     getTrackListing,
-    getTrackToFile,
-    sendTrackFromFile,
+    getTrack,
+    sendTrack,
     updateTrack,
     -- * Audio\/video playlist management
     getPlaylistList, getPlaylist, createPlaylist, updatePlaylist,
@@ -648,16 +648,16 @@ getFileListing h = withMTPHandle h $ \ptr ->
                         }
 
 -- | Copy a file from the device to a local file.
-getFileToFile :: MTPHandle -> Int -> FilePath -> IO ()
-getFileToFile h i n =
+getFile :: MTPHandle -> Int -> FilePath -> IO ()
+getFile h i n =
     withMTPHandle h $ \devptr ->
     withCAString n $ \str_ptr -> do
         r <- c_get_file_to_file devptr (fromIntegral i) str_ptr nullPtr nullPtr
         unless (r == 0) (getErrorStack h)
 
 -- | Send a local file to the device.
-sendFileFromFile :: MTPHandle -> FilePath -> IO ()
-sendFileFromFile h n =
+sendFile :: MTPHandle -> FilePath -> IO ()
+sendFile h n =
     withMTPHandle h $ \devptr ->
     withCAString n $ \str_ptr -> do
         r <- c_send_file_from_file devptr str_ptr nullPtr nullPtr
@@ -673,8 +673,8 @@ handleToCFile h m = withCAString m $ \iomode -> do
     fdopen fd iomode
 
 -- | Get a file from the device to a file handle.
-hGetFileToFile :: MTPHandle -> Int -> Handle -> IO ()
-hGetFileToFile h i fd = withMTPHandle h $ \devptr -> do
+hGetFile :: MTPHandle -> Int -> Handle -> IO ()
+hGetFile h i fd = withMTPHandle h $ \devptr -> do
     oh <- handleToCFile fd "w"
     r <- c_get_file_to_file_descriptor devptr (fromIntegral i) oh nullPtr
                                        nullPtr
@@ -683,8 +683,8 @@ hGetFileToFile h i fd = withMTPHandle h $ \devptr -> do
     unless (r == 0) (getErrorStack h)
 
 -- | Send a file to the device from a file handle.
-hSendFileFromFile :: MTPHandle -> Handle -> File -> IO ()
-hSendFileFromFile h fd f = withMTPHandle h $ \devptr ->
+hSendFile :: MTPHandle -> Handle -> File -> IO ()
+hSendFile h fd f = withMTPHandle h $ \devptr ->
     withFilePtr f $ \file_ptr -> do
         ih <- handleToCFile fd "r"
         r <- c_send_file_from_file_descriptor devptr ih file_ptr nullPtr
@@ -795,15 +795,15 @@ getTrackListing h = withMTPHandle h $ \ptr ->
                             }
 
 -- | Copy a track from the device to a local file.
-getTrackToFile :: MTPHandle -> Int -> FilePath -> IO ()
-getTrackToFile h i n = withMTPHandle h $ \devptr ->
+getTrack :: MTPHandle -> Int -> FilePath -> IO ()
+getTrack h i n = withMTPHandle h $ \devptr ->
     withCAString n $ \strptr -> do
         r <- c_get_track_to_file devptr (fromIntegral i) strptr nullPtr nullPtr
         unless (r == 0) (getErrorStack h)
 
 -- | Send a local file to the device, using the supplied metadata.
-sendTrackFromFile :: MTPHandle -> FilePath -> Track -> IO ()
-sendTrackFromFile h n t = withMTPHandle h $ \devptr ->
+sendTrack :: MTPHandle -> FilePath -> Track -> IO ()
+sendTrack h n t = withMTPHandle h $ \devptr ->
     withCAString n $ \strptr -> withTrackPtr t $ \tt_ptr -> do
         r <- c_send_track_from_file devptr strptr tt_ptr nullPtr nullPtr
         unless (r == 0) (getErrorStack h)
