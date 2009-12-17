@@ -44,6 +44,7 @@ import Control.Monad
 import Data.Typeable
 import Foreign
 import Foreign.C
+import Foreign.Marshal.Alloc
 
 #include <libmtp.h>
 
@@ -549,15 +550,11 @@ getDeviceVersion :: MTPHandle -> IO String
 getDeviceVersion h = withMTPHandle h $ \ptr ->
     peekCString =<< c_get_deviceversion ptr
 
--- Create a temporary pointer to a CInt.
-withIntPtr :: (Ptr CInt -> IO a) -> IO a
-withIntPtr = bracket (malloc :: IO (Ptr CInt)) free
-
 -- | Get battery level, maximum and current.
 getBatteryLevel :: MTPHandle -> IO (Int, Int)
 getBatteryLevel h = withMTPHandle h $ \devptr ->
-    withIntPtr $ \maxptr ->
-    withIntPtr $ \curptr -> do
+    alloca $ \maxptr ->
+    alloca $ \curptr -> do
         ret <- c_get_batterylevel devptr maxptr curptr
         unless (ret == 0) (getErrorStack h)
         maxv <- peek maxptr
@@ -567,8 +564,8 @@ getBatteryLevel h = withMTPHandle h $ \devptr ->
 -- | Get a list of supported file types.
 getSupportedFileTypes :: MTPHandle -> IO [FileType]
 getSupportedFileTypes h = withMTPHandle h $ \devptr ->
-    withIntPtr $ \ft_ptr ->
-    withIntPtr $ \len_ptr -> do
+    alloca $ \ft_ptr ->
+    alloca $ \len_ptr -> do
         r <- c_get_supported_filetypes devptr ft_ptr len_ptr
         unless (r == 0) (getErrorStack h)
         len <- peek len_ptr
