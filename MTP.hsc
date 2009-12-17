@@ -29,7 +29,10 @@ module MTP (
     getDeviceVersion, getManufacturerName, getModelName, getSerialNumber,
     getFriendlyName, getBatteryLevel, getSupportedFileTypes,
     -- * File management
-    getFileListing, getFileToFile, sendFileFromFile, setFileName,
+    getFileListing,
+    getFileToFile, hGetFileToFile,
+    sendFileFromFile, hSendFileFromFile,
+    setFileName,
     -- * Track management
     doesTrackExist,
     getTrackListing,
@@ -43,12 +46,17 @@ module MTP (
 
 import Control.Exception
 import Control.Monad
+import GHC.Handle
 import Data.Maybe
 import Data.Typeable
 import Foreign
 import Foreign.C
 import Foreign.Marshal.Alloc
+import System.IO
+import System.Posix.IO
+import System.Posix.Types
 
+#include <stdio.h>
 #include <libmtp.h>
 
 ------------------------------------------------------------------------------
@@ -284,6 +292,12 @@ instance Storable Playlist_t where
 -- Foreign imports
 ------------------------------------------------------------------------------
 
+foreign import ccall unsafe "fdopen" fdopen :: Fd -> CString -> IO (Ptr CFile)
+
+foreign import ccall unsafe "fflush" fflush :: Ptr CFile -> IO ()
+
+foreign import ccall unsafe "fclose" fclose :: Ptr CFile -> IO ()
+
 foreign import ccall unsafe "LIBMTP_Get_First_Device" c_get_first_device
     :: IO (Ptr MTPDevice)
 
@@ -354,6 +368,22 @@ foreign import ccall unsafe "LIBMTP_Send_File_From_File" c_send_file_from_file
     -> Ptr Callback
     -> Ptr Data
     -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Get_File_To_File_Descriptor"
+    c_get_file_to_file_descriptor :: Ptr MTPDevice
+                                  -> CInt
+                                  -> Ptr CFile
+                                  -> Ptr Callback
+                                  -> Ptr Data
+                                  -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Send_File_From_File_Descriptor"
+    c_send_file_from_file_descriptor :: Ptr MTPDevice
+                                     -> Ptr CFile
+                                     -> Ptr File_t
+                                     -> Ptr Callback
+                                     -> Ptr Data
+                                     -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Set_File_Name" c_set_file_name
     :: Ptr MTPDevice
@@ -631,6 +661,35 @@ sendFileFromFile h n =
     withMTPHandle h $ \devptr ->
     withCAString n $ \str_ptr -> do
         r <- c_send_file_from_file devptr str_ptr nullPtr nullPtr
+        unless (r == 0) (getErrorStack h)
+
+-- Convert a Handle to a CFile.
+-- Source <http://haskell.org/haskellwiki/The_Monad.Reader/Issue2/Bzlib2Binding>
+handleToCFile :: Handle -> String -> IO (Ptr CFile)
+handleToCFile h m = withCAString m $ \iomode -> do
+    -- Create a duplicate so the original handle is kept open
+    h' <- hDuplicate h
+    fd <- handleToFd h'
+    fdopen fd iomode
+
+-- | Get a file from the device to a file handle.
+hGetFileToFile :: MTPHandle -> Int -> Handle -> IO ()
+hGetFileToFile h i fd = withMTPHandle h $ \devptr -> do
+    oh <- handleToCFile fd "w"
+    r <- c_get_file_to_file_descriptor devptr (fromIntegral i) oh nullPtr
+                                       nullPtr
+    fflush oh
+    fclose oh
+    unless (r == 0) (getErrorStack h)
+
+-- | Send a file to the device from a file handle.
+hSendFileFromFile :: MTPHandle -> Handle -> File -> IO ()
+hSendFileFromFile h fd f = withMTPHandle h $ \devptr ->
+    withFilePtr f $ \file_ptr -> do
+        ih <- handleToCFile fd "r"
+        r <- c_send_file_from_file_descriptor devptr ih file_ptr nullPtr
+                                              nullPtr
+        fclose ih
         unless (r == 0) (getErrorStack h)
 
 -- | Rename a file on the device.
