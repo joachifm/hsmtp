@@ -38,6 +38,7 @@ module MTP (
     getTrackListing,
     getTrack,
     sendTrack,
+    hGetTrack, hSendTrack,
     updateTrack,
     getTrackMetadata,
     -- * Audio\/video playlist management
@@ -413,6 +414,22 @@ foreign import ccall unsafe "LIBMTP_Send_Track_From_File" c_send_track_from_file
     -> Ptr Callback
     -> Ptr Data
     -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Send_Track_From_File_Descriptor"
+   c_send_track_from_file_descriptor :: Ptr MTPDevice
+                                     -> Ptr CFile
+                                     -> Ptr Track_t
+                                     -> Ptr Callback
+                                     -> Ptr Data
+                                     -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Get_Track_To_File_Descriptor"
+   c_get_track_to_file_descriptor :: Ptr MTPDevice
+                                  -> CInt
+                                  -> Ptr CFile
+                                  -> Ptr Callback
+                                  -> Ptr Data
+                                  -> IO CInt
 
 foreign import ccall unsafe "LIBMTP_Get_Trackmetadata"
     c_get_trackmetadata :: Ptr MTPDevice
@@ -809,11 +826,31 @@ getTrack h i n = withMTPHandle h $ \devptr ->
         r <- c_get_track_to_file devptr (fromIntegral i) strptr nullPtr nullPtr
         unless (r == 0) (getErrorStack h)
 
--- | Send a local file to the device, using the supplied metadata.
+-- | Send a local track to the device, using the supplied metadata.
 sendTrack :: MTPHandle -> FilePath -> Track -> IO ()
 sendTrack h n t = withMTPHandle h $ \devptr ->
     withCAString n $ \strptr -> withTrackPtr t $ \tt_ptr -> do
         r <- c_send_track_from_file devptr strptr tt_ptr nullPtr nullPtr
+        unless (r == 0) (getErrorStack h)
+
+-- | Copy a track from the device to a file handle.
+hGetTrack :: MTPHandle -> Int -> Handle -> IO ()
+hGetTrack h i fd = withMTPHandle h $ \devptr -> do
+    oh <- handleToCFile fd "w"
+    r <- c_get_track_to_file_descriptor devptr (fromIntegral i) oh nullPtr
+                                        nullPtr
+    fflush oh
+    fclose oh
+    unless (r == 0) (getErrorStack h)
+
+-- | Send a track to the device from a file handle.
+hSendTrack :: MTPHandle -> Handle -> Track -> IO ()
+hSendTrack h fd t = withMTPHandle h $ \devptr ->
+    withTrackPtr t $ \track_ptr -> do
+        ih <- handleToCFile fd "r"
+        r <- c_send_track_from_file_descriptor devptr ih track_ptr nullPtr
+                                               nullPtr
+        fclose ih
         unless (r == 0) (getErrorStack h)
 
 -- | Update track metadata.
