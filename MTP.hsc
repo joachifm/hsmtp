@@ -14,7 +14,7 @@
 
 module MTP (
     -- * Types
-    MTPHandle, Track(..), File(..), Playlist(..), FileType,
+    MTPHandle, Track(..), File(..), Folder(..), Playlist(..), FileType,
     MTPException(..),
     -- * Constants
     version,
@@ -42,6 +42,8 @@ module MTP (
     updateTrack,
     getTrackMetadata,
     setTrackName,
+    -- * Folder management
+    createFolder, getFolderList, setFolderName,
     -- * Audio\/video playlist management
     getPlaylistList, getPlaylist, createPlaylist, updatePlaylist,
     setPlaylistName
@@ -258,6 +260,42 @@ instance Storable Track_t where
         #{poke LIBMTP_track_t, filetype} ptr (tt_filetype tt)
         #{poke LIBMTP_track_t, next} ptr (tt_next tt)
 
+-- An intermediate structure for the LIBMTP_folder_t struct.
+-- We need this because LIBMTP_folder_t is recursive.
+data Folder_t = Folder_t
+    { fdt_folder_id :: CInt
+    , fdt_parent_id :: CInt
+    , fdt_storage_id :: CInt
+    , fdt_name :: CString
+    , fdt_sibling :: Ptr Folder_t
+    , fdt_child :: Ptr Folder_t
+    }
+
+instance Storable Folder_t where
+    sizeOf _ = #{size LIBMTP_folder_t}
+    alignment = sizeOf
+    peek ptr = do
+        fid <- #{peek LIBMTP_folder_t, folder_id} ptr
+        pid <- #{peek LIBMTP_folder_t, parent_id} ptr
+        sid <- #{peek LIBMTP_folder_t, storage_id} ptr
+        name <- #{peek LIBMTP_folder_t, name} ptr
+        sibling <- #{peek LIBMTP_folder_t, sibling} ptr
+        child <- #{peek LIBMTP_folder_t, child} ptr
+        return $! Folder_t { fdt_folder_id = fid
+                           , fdt_parent_id = pid
+                           , fdt_storage_id = sid
+                           , fdt_name = name
+                           , fdt_sibling = sibling
+                           , fdt_child = child
+                           }
+    poke ptr fdt = do
+        #{poke LIBMTP_folder_t, folder_id} ptr (fdt_folder_id fdt)
+        #{poke LIBMTP_folder_t, parent_id} ptr (fdt_parent_id fdt)
+        #{poke LIBMTP_folder_t, storage_id} ptr (fdt_storage_id fdt)
+        #{poke LIBMTP_folder_t, name} ptr (fdt_name fdt)
+        #{poke LIBMTP_folder_t, sibling} ptr (fdt_sibling fdt)
+        #{poke LIBMTP_folder_t, child} ptr (fdt_child fdt)
+
 -- An intermediate structure for the LIBMTP_playlist_t struct.
 -- We need this because LIBMTP_playlist_t is recursive.
 data Playlist_t = Playlist_t
@@ -448,6 +486,23 @@ foreign import ccall unsafe "LIBMTP_Set_Track_Name" c_set_track_name
     -> CString
     -> IO CInt
 
+foreign import ccall unsafe "LIBMTP_Create_Folder" c_create_folder
+    :: Ptr MTPDevice
+    -> CString
+    -> CInt
+    -> CInt
+    -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Get_Folder_List" c_folder_list
+    :: Ptr MTPDevice
+    -> IO (Ptr Folder_t)
+
+foreign import ccall unsafe "LIBMTP_Set_Folder_Name" c_set_folder_name
+    :: Ptr MTPDevice
+    -> Ptr Folder_t
+    -> CString
+    -> IO CInt
+
 foreign import ccall unsafe "LIBMTP_Get_Playlist_List"
     c_get_playlist_list :: Ptr MTPDevice
                         -> IO (Ptr Playlist_t)
@@ -523,7 +578,16 @@ data Track = Track
     , trackFileType :: FileType
     } deriving (Eq, Show)
 
--- | Playlist metadata
+-- | Folder metadata.
+data Folder = Folder
+    { folderID :: Int
+    , folderParentID :: Int
+    , folderStorageID :: Int
+    , folderName :: String
+    , folderChild :: Maybe Folder
+    }
+
+-- | Playlist metadata.
 data Playlist = Playlist
     { playlistID :: Int
     , playlistParentID :: Int
@@ -879,6 +943,74 @@ setTrackName h t n = withMTPHandle h $ \devptr ->
     withTrackPtr t $ \track_ptr ->
     withCAString n $ \name_ptr -> do
         r <- c_set_track_name devptr track_ptr name_ptr
+        unless (r == 0) (getErrorStack h)
+
+peekFolder :: Ptr Folder_t -> IO [Folder]
+peekFolder = go []
+    where
+        go acc p =
+            if p == nullPtr
+               then return acc
+               else do
+                   fdt <- peek p
+                   fdn <- convert fdt
+                   free p
+                   go (fdn : acc) (fdt_sibling fdt)
+        convert fdt = do
+            name <- peekCString (fdt_name fdt)
+            child <- if fdt_child fdt == nullPtr
+                      then return Nothing
+                      else peek (fdt_child fdt) >>= convert >>= return . Just
+            return $! Folder
+                       { folderID = fromIntegral (fdt_folder_id fdt)
+                       , folderParentID = fromIntegral (fdt_parent_id fdt)
+                       , folderStorageID = fromIntegral (fdt_storage_id fdt)
+                       , folderName = name
+                       , folderChild = child
+                       }
+
+withFolderPtr :: Folder -> (Ptr Folder_t -> IO a) -> IO a
+withFolderPtr f = bracket alloc free
+    where
+        alloc = do
+            ptr <- malloc :: IO (Ptr Folder_t)
+            fdt <- marshall
+            poke ptr fdt
+            return ptr
+        marshall =
+            withCAString (folderName f) $ \name_ptr ->
+                return Folder_t
+                           { fdt_folder_id = fromIntegral (folderID f)
+                           , fdt_parent_id = fromIntegral (folderParentID f)
+                           , fdt_storage_id = fromIntegral (folderStorageID f)
+                           , fdt_name = name_ptr
+                           , fdt_sibling = nullPtr
+                           , fdt_child = nullPtr
+                           }
+
+-- | Create a new folder.
+createFolder :: MTPHandle
+             -> String -- ^ Folder name
+             -> Int    -- ^ Parent ID
+             -> Int    -- ^ Storage ID
+             -> IO Int -- ^ ID to new folder
+createFolder h n pid sid = withMTPHandle h $ \devptr ->
+    withCAString n $ \name_ptr -> do
+        r <- c_create_folder devptr name_ptr (fromIntegral pid) (fromIntegral sid)
+        when (r == 0) (getErrorStack h)
+        return $ fromIntegral r
+
+-- | Get a list of all folders on the device.
+getFolderList :: MTPHandle -> IO [Folder]
+getFolderList h = withMTPHandle h $ \devptr ->
+    peekFolder =<< c_folder_list devptr
+
+-- | Rename a folder.
+setFolderName :: MTPHandle -> Folder -> String -> IO ()
+setFolderName h f n = withMTPHandle h $ \devptr ->
+    withFolderPtr f $ \folder_ptr ->
+    withCAString n $ \name_ptr -> do
+        r <- c_set_folder_name devptr folder_ptr name_ptr
         unless (r == 0) (getErrorStack h)
 
 -- Marshall a Playlist into a Playlist_t pointer using temporary storage.
