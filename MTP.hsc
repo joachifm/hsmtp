@@ -46,7 +46,9 @@ module MTP (
     createFolder, getFolderList, setFolderName,
     -- * Audio\/video playlist management
     getPlaylistList, getPlaylist, createPlaylist, updatePlaylist,
-    setPlaylistName
+    setPlaylistName,
+    -- * Object management
+    deleteObject, setObjectName
     ) where
 
 import Control.Exception
@@ -528,6 +530,17 @@ foreign import ccall unsafe "LIBMTP_Set_Playlist_Name"
                         -> CString
                         -> IO CInt
 
+foreign import ccall unsafe "LIBMTP_Delete_Object"
+    c_delete_object :: Ptr MTPDevice
+                    -> CInt
+                    -> IO CInt
+
+foreign import ccall unsafe "LIBMTP_Set_Object_Filename"
+    c_set_object_filename :: Ptr MTPDevice
+                          -> CInt
+                          -> CString
+                          -> IO CInt
+
 ------------------------------------------------------------------------------
 -- High-level interface
 ------------------------------------------------------------------------------
@@ -968,6 +981,7 @@ peekFolder = go []
                        , folderChild = child
                        }
 
+-- XXX: should handle siblings and children
 withFolderPtr :: Folder -> (Ptr Folder_t -> IO a) -> IO a
 withFolderPtr f = bracket alloc free
     where
@@ -1087,4 +1101,17 @@ setPlaylistName h pl name = withMTPHandle h $ \devptr ->
     withPlaylistPtr pl $ \plptr ->
     withCAString name $ \nameptr -> do
         r <- c_set_playlist_name devptr plptr nameptr
+        unless (r == 0) (checkError h)
+
+-- | Delete a single file, track, playlist, folder or any other object.
+deleteObject :: MTPHandle -> Int -> IO ()
+deleteObject h i = withMTPHandle h $ \devptr -> do
+    r <- c_delete_object devptr (fromIntegral i)
+    unless (r == 0) (checkError h)
+
+-- | Set the filename of any object.
+setObjectName :: MTPHandle -> Int -> String -> IO ()
+setObjectName h i n = withMTPHandle h $ \devptr ->
+    withCAString n $ \name_ptr -> do
+        r <- c_set_object_filename devptr (fromIntegral i) name_ptr
         unless (r == 0) (checkError h)
