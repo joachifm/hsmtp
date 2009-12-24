@@ -611,10 +611,9 @@ withMTPHandle (MTPHandle h) = withForeignPtr h
 withFirstDevice :: (MTPHandle -> IO a) -> IO a
 withFirstDevice = bracket getFirstDevice releaseDevice
 
--- XXX: need a better name for this
 -- A helper that checks the error stack and throws an exception if there is an error.
-getErrorStack :: MTPHandle -> IO ()
-getErrorStack h = withMTPHandle h $ \devptr -> do
+checkError :: MTPHandle -> IO ()
+checkError h = withMTPHandle h $ \devptr -> do
     e_ptr <- c_get_errorstack devptr
     unless (e_ptr == nullPtr) $ do
         et <- peek e_ptr
@@ -626,7 +625,7 @@ getErrorStack h = withMTPHandle h $ \devptr -> do
             #{const LIBMTP_ERROR_STORAGE_FULL} -> throw StorageFull
             #{const LIBMTP_ERROR_CONNECTING} -> throw ConnectionFailed
             #{const LIBMTP_ERROR_CANCELLED} -> throw Cancelled
-            x -> error $ "getErrorStack: unhandled error number: " ++ show x
+            x -> error $ "checkError: unhandled error number: " ++ show x
 
 -- | Connect to the first available MTP device.
 getFirstDevice :: IO MTPHandle
@@ -650,7 +649,7 @@ releaseDevice h = withMTPHandle h c_release_device
 resetDevice :: MTPHandle -> IO ()
 resetDevice h = withMTPHandle h $ \devptr -> do
     r <- c_reset_device devptr
-    unless (r == 0) (getErrorStack h)
+    unless (r == 0) (checkError h)
 
 -- | Get the device manufacturer name.
 getManufacturerName :: MTPHandle -> IO String
@@ -683,7 +682,7 @@ getBatteryLevel h = withMTPHandle h $ \devptr ->
     alloca $ \maxptr ->
     alloca $ \curptr -> do
         ret <- c_get_batterylevel devptr maxptr curptr
-        unless (ret == 0) (getErrorStack h)
+        unless (ret == 0) (checkError h)
         maxv <- peek maxptr
         curv <- peek curptr
         return (fromIntegral maxv, fromIntegral curv)
@@ -694,7 +693,7 @@ getSupportedFileTypes h = withMTPHandle h $ \devptr ->
     alloca $ \ft_ptr ->
     alloca $ \len_ptr -> do
         r <- c_get_supported_filetypes devptr ft_ptr len_ptr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
         len <- peek len_ptr
         map FileType `fmap` peekArray (fromIntegral len) ft_ptr
 
@@ -747,7 +746,7 @@ getFile h i n =
     withMTPHandle h $ \devptr ->
     withCAString n $ \str_ptr -> do
         r <- c_get_file_to_file devptr (fromIntegral i) str_ptr nullPtr nullPtr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- | Send a local file to the device.
 sendFile :: MTPHandle -> FilePath -> IO ()
@@ -755,7 +754,7 @@ sendFile h n =
     withMTPHandle h $ \devptr ->
     withCAString n $ \str_ptr -> do
         r <- c_send_file_from_file devptr str_ptr nullPtr nullPtr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- Convert a Handle to a CFile.
 -- Source <http://haskell.org/haskellwiki/The_Monad.Reader/Issue2/Bzlib2Binding>
@@ -774,7 +773,7 @@ hGetFile h i fd = withMTPHandle h $ \devptr -> do
                                        nullPtr
     fflush oh
     fclose oh
-    unless (r == 0) (getErrorStack h)
+    unless (r == 0) (checkError h)
 
 -- | Send a file to the device from a file handle.
 hSendFile :: MTPHandle -> Handle -> File -> IO ()
@@ -784,7 +783,7 @@ hSendFile h fd f = withMTPHandle h $ \devptr ->
         r <- c_send_file_from_file_descriptor devptr ih file_ptr nullPtr
                                               nullPtr
         fclose ih
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- | Rename a file on the device.
 setFileName :: MTPHandle -> File -> String -> IO ()
@@ -793,7 +792,7 @@ setFileName h f n =
     withFilePtr f $ \file_ptr ->
     withCAString n $ \str_ptr -> do
         r <- c_set_file_name devptr file_ptr str_ptr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- Marshall a Track into a Track_t pointer using temporary storage.
 withTrackPtr :: Track -> (Ptr Track_t -> IO a) -> IO a
@@ -895,14 +894,14 @@ getTrack :: MTPHandle -> Int -> FilePath -> IO ()
 getTrack h i n = withMTPHandle h $ \devptr ->
     withCAString n $ \strptr -> do
         r <- c_get_track_to_file devptr (fromIntegral i) strptr nullPtr nullPtr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- | Send a local track to the device, using the supplied metadata.
 sendTrack :: MTPHandle -> FilePath -> Track -> IO ()
 sendTrack h n t = withMTPHandle h $ \devptr ->
     withCAString n $ \strptr -> withTrackPtr t $ \tt_ptr -> do
         r <- c_send_track_from_file devptr strptr tt_ptr nullPtr nullPtr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- | Copy a track from the device to a file handle.
 hGetTrack :: MTPHandle -> Int -> Handle -> IO ()
@@ -912,7 +911,7 @@ hGetTrack h i fd = withMTPHandle h $ \devptr -> do
                                         nullPtr
     fflush oh
     fclose oh
-    unless (r == 0) (getErrorStack h)
+    unless (r == 0) (checkError h)
 
 -- | Send a track to the device from a file handle.
 hSendTrack :: MTPHandle -> Handle -> Track -> IO ()
@@ -922,14 +921,14 @@ hSendTrack h fd t = withMTPHandle h $ \devptr ->
         r <- c_send_track_from_file_descriptor devptr ih track_ptr nullPtr
                                                nullPtr
         fclose ih
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- | Update track metadata.
 updateTrack :: MTPHandle -> Track -> IO ()
 updateTrack h t = withMTPHandle h $ \devptr ->
     withTrackPtr t $ \tt_ptr -> do
         r <- c_update_track_metadata devptr tt_ptr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- | Get metadata for a single track.
 getTrackMetadata :: MTPHandle -> Int -> IO (Maybe Track)
@@ -943,7 +942,7 @@ setTrackName h t n = withMTPHandle h $ \devptr ->
     withTrackPtr t $ \track_ptr ->
     withCAString n $ \name_ptr -> do
         r <- c_set_track_name devptr track_ptr name_ptr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 peekFolder :: Ptr Folder_t -> IO [Folder]
 peekFolder = go []
@@ -997,7 +996,7 @@ createFolder :: MTPHandle
 createFolder h n pid sid = withMTPHandle h $ \devptr ->
     withCAString n $ \name_ptr -> do
         r <- c_create_folder devptr name_ptr (fromIntegral pid) (fromIntegral sid)
-        when (r == 0) (getErrorStack h)
+        when (r == 0) (checkError h)
         return $ fromIntegral r
 
 -- | Get a list of all folders on the device.
@@ -1011,7 +1010,7 @@ setFolderName h f n = withMTPHandle h $ \devptr ->
     withFolderPtr f $ \folder_ptr ->
     withCAString n $ \name_ptr -> do
         r <- c_set_folder_name devptr folder_ptr name_ptr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- Marshall a Playlist into a Playlist_t pointer using temporary storage.
 withPlaylistPtr :: Playlist -> (Ptr Playlist_t -> IO a) -> IO a
@@ -1073,14 +1072,14 @@ createPlaylist :: MTPHandle -> Playlist -> IO ()
 createPlaylist h pl = withMTPHandle h $ \devptr ->
     withPlaylistPtr pl $ \plptr -> do
         r <- c_create_new_playlist devptr plptr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- | Update an existing playlist.
 updatePlaylist :: MTPHandle -> Playlist -> IO ()
 updatePlaylist h pl = withMTPHandle h $ \devptr ->
     withPlaylistPtr pl $ \plptr -> do
         r <- c_update_playlist devptr plptr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
 
 -- | Rename an existing playlist. The expected name suffix is \".pla\".
 setPlaylistName :: MTPHandle -> Playlist -> String -> IO ()
@@ -1088,4 +1087,4 @@ setPlaylistName h pl name = withMTPHandle h $ \devptr ->
     withPlaylistPtr pl $ \plptr ->
     withCAString name $ \nameptr -> do
         r <- c_set_playlist_name devptr plptr nameptr
-        unless (r == 0) (getErrorStack h)
+        unless (r == 0) (checkError h)
