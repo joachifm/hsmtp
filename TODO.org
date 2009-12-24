@@ -1,0 +1,8 @@
+* TODO Fix finalizer segfaults
+  When finalizerFree is run we get a double free error
+  In fact, running free on the devptr at all does this.
+* TODO releaseDevice leaves invalid handles
+* TODO Look for resource leaks
+* TODO Support callbacks
+* TODO More efficient representation of track and file listings
+* TODO Is Folder a good representation of Folder_t?
