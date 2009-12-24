@@ -627,6 +627,15 @@ checkError h = withMTPHandle h $ \devptr -> do
             #{const LIBMTP_ERROR_CANCELLED} -> throw Cancelled
             x -> error $ "checkError: unhandled error number: " ++ show x
 
+-- Convert a Handle to a CFile.
+-- Source <http://haskell.org/haskellwiki/The_Monad.Reader/Issue2/Bzlib2Binding>
+handleToCFile :: Handle -> String -> IO (Ptr CFile)
+handleToCFile h m = withCAString m $ \iomode -> do
+    -- Create a duplicate so the original handle is kept open
+    h' <- hDuplicate h
+    fd <- handleToFd h'
+    fdopen fd iomode
+
 -- | Connect to the first available MTP device.
 getFirstDevice :: IO MTPHandle
 getFirstDevice = do
@@ -755,15 +764,6 @@ sendFile h n =
     withCAString n $ \str_ptr -> do
         r <- c_send_file_from_file devptr str_ptr nullPtr nullPtr
         unless (r == 0) (checkError h)
-
--- Convert a Handle to a CFile.
--- Source <http://haskell.org/haskellwiki/The_Monad.Reader/Issue2/Bzlib2Binding>
-handleToCFile :: Handle -> String -> IO (Ptr CFile)
-handleToCFile h m = withCAString m $ \iomode -> do
-    -- Create a duplicate so the original handle is kept open
-    h' <- hDuplicate h
-    fd <- handleToFd h'
-    fdopen fd iomode
 
 -- | Get a file from the device to a file handle.
 hGetFile :: MTPHandle -> Int -> Handle -> IO ()
