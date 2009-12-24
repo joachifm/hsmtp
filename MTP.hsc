@@ -66,6 +66,8 @@ import System.Posix.Types
 #include <stdio.h>
 #include <libmtp.h>
 
+#let alignment t = "%lu", (unsigned long)offsetof(struct {char x__; t(y__); }, y__)
+
 ------------------------------------------------------------------------------
 -- Constants
 ------------------------------------------------------------------------------
@@ -141,7 +143,7 @@ data Error_t = Error_t
 
 instance Storable Error_t where
     sizeOf _ = #{size LIBMTP_error_t}
-    alignment = sizeOf
+    alignment _ = #{alignment LIBMTP_error_t}
     peek ptr = do
         en <- #{peek LIBMTP_error_t, errornumber} ptr
         et <- #{peek LIBMTP_error_t, error_text} ptr
@@ -165,7 +167,7 @@ data File_t = File_t
 
 instance Storable File_t where
     sizeOf _ = #{size LIBMTP_file_t}
-    alignment = sizeOf
+    alignment _ = #{alignment LIBMTP_file_t}
     peek ptr = do
         fid  <- #{peek LIBMTP_file_t, item_id} ptr
         pid  <- #{peek LIBMTP_file_t, parent_id} ptr
@@ -211,7 +213,7 @@ data Track_t = Track_t
 
 instance Storable Track_t where
     sizeOf _ = #{size LIBMTP_track_t}
-    alignment = sizeOf
+    alignment _ = #{alignment LIBMTP_track_t}
     peek ptr = do
         iid <- #{peek LIBMTP_track_t, item_id} ptr
         pid <- #{peek LIBMTP_track_t, parent_id} ptr
@@ -275,7 +277,7 @@ data Folder_t = Folder_t
 
 instance Storable Folder_t where
     sizeOf _ = #{size LIBMTP_folder_t}
-    alignment = sizeOf
+    alignment _ = #{alignment LIBMTP_folder_t}
     peek ptr = do
         fid <- #{peek LIBMTP_folder_t, folder_id} ptr
         pid <- #{peek LIBMTP_folder_t, parent_id} ptr
@@ -312,7 +314,7 @@ data Playlist_t = Playlist_t
 
 instance Storable Playlist_t where
     sizeOf _ = #{size LIBMTP_playlist_t}
-    alignment = sizeOf
+    alignment _ = #{alignment LIBMTP_playlist_t}
     peek ptr = do
         plid <- #{peek LIBMTP_playlist_t, playlist_id} ptr
         pid <- #{peek LIBMTP_playlist_t, parent_id} ptr
