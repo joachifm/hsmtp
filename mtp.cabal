@@ -23,6 +23,9 @@ source-repository head
 library
         exposed-modules: MTP
         build-depends: base ==4.*, unix ==2.*
-        extensions: ForeignFunctionInterface, CPP, EmptyDataDecls
+        extensions: ForeignFunctionInterface, CPP, EmptyDataDecls,
+                    DeriveDataTypeable
         includes: libmtp.h
         extra-libraries: mtp
+        ghc-options: -Wall
+        ghc-prof-options: -prof -auto-all
