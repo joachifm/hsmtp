@@ -3,7 +3,7 @@
 
 -- |
 -- Module      : MTP
--- Copyright   : (c) Joachim Fasting
+-- Copyright   : (c) Joachim Fasting 2010
 -- License     : LGPL
 --
 -- Maintainer  : Joachim Fasting <joachim.fasting@gmail.com>
