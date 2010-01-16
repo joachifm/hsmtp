@@ -53,13 +53,11 @@ module MTP (
 
 import Control.Exception
 import Control.Monad
-import GHC.Handle
+import GHC.IO.Handle
 import Data.Maybe
 import Data.Typeable
 import Foreign
 import Foreign.C
-import Foreign.Marshal.Alloc
-import System.IO
 import System.Posix.IO
 import System.Posix.Types
 
