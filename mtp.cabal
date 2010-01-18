@@ -12,7 +12,7 @@ description:
         Protocol.
         .
         See <http://libmtp.sourceforge.net> for more information.
-extra-source-files: README.md
+extra-source-files: ChangeLog, README.md
 build-type: Simple
 cabal-version: >= 1.2
 
