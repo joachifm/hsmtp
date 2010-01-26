@@ -14,7 +14,7 @@ description:
         See <http://libmtp.sourceforge.net> for more information.
 extra-source-files: ChangeLog, README.md
 build-type: Simple
-cabal-version: >= 1.2
+cabal-version: >= 1.6 && < 1.9
 
 source-repository head
       type: git
