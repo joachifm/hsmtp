@@ -5,7 +5,7 @@ license-file: COPYING
 copyright: Joachim Fasting 2010
 author: Joachim Fasting
 maintainer: Joachim Fasting <joachim.fasting@gmail.com>
-category:
+category: Sound
 synopsis: Bindings to libmtp
 description:
         A FFI binding to libmtp, an implementation of the Media Transfer
