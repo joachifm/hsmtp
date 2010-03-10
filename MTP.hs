@@ -48,7 +48,9 @@ module MTP (
     getPlaylistList, getPlaylist, createPlaylist, updatePlaylist,
     setPlaylistName,
     -- * Object management
-    deleteObject, setObjectName
+    deleteObject, setObjectName,
+    -- * Extras
+    findFileType
     ) where
 
 import Foreign.Handle
@@ -60,6 +62,7 @@ import Data.Maybe
 import Data.Typeable
 import Foreign
 import Foreign.C
+import System.FilePath
 import System.IO
 
 ------------------------------------------------------------------------------
@@ -678,3 +681,26 @@ setObjectName h i n = withMTPHandle h $ \devptr ->
     withCAString n $ \name_ptr -> do
         r <- c_set_object_filename devptr (fromIntegral i) name_ptr
         unless (r == 0) (checkError h)
+
+------------------------------------------------------------------------------
+-- Extras
+------------------------------------------------------------------------------
+
+-- | Find the FileType for a given file name.
+findFileType :: FilePath -> FileType
+findFileType path =
+    fromMaybe unknown (lookup (takeExtension path) tbl)
+    where
+        tbl = [(".wav", wav), (".mp3", mp3), (".wma", wma), (".ogg", ogg)
+              ,(".aa", audible), (".mp4", mp4), (".wmv", wmv), (".avi", avi)
+              ,(".mpg", mpeg), (".mpeg", mpeg), (".asf", asf), (".qt", qt)
+              ,(".mov", qt), (".jpg", jpeg), (".jpeg", jpeg), (".jfif", jfif)
+              ,(".tif", tiff), (".tiff", tiff), (".bmp", bmp), (".gif", gif)
+              ,(".pict", pict), (".pct", pict), (".pic", pict), (".png", png)
+              ,(".ics", vcalendar2), (".ical", vcalendar2), (".ifb", vcalendar2)
+              ,(".icalendar", vcalendar2), (".vcard", vcard3), (".vcf", vcard3)
+              ,(".wmf", windowsimageformat), (".exe", winexec), (".com", winexec)
+              ,(".bat", winexec), (".dll", winexec), (".sys", winexec), (".txt", text)
+              ,(".html", html), (".bin", firmware), (".aac", aac), (".flac", flac)
+              ,(".mp2", mp2), (".m4a", m4a), (".doc", doc), (".xml", xml), (".xls", xls)
+              ,(".ppt", ppt), (".mht", mht), (".jp2", jp2), (".jpx", jpx)]

@@ -24,7 +24,7 @@ library
         exposed-modules: MTP
         other-modules: Foreign.Handle,
                        MTP.Foreign
-        build-depends: base ==4.2.*, unix ==2.4.*
+        build-depends: base ==4.2.*, unix ==2.4.*, filepath ==1.1.*
         extensions: ForeignFunctionInterface, CPP, EmptyDataDecls,
                     DeriveDataTypeable
         includes: libmtp.h
