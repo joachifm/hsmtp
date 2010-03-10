@@ -77,6 +77,9 @@ newtype FileType = FileType { unFileType :: CInt }
  ,ppt = LIBMTP_FILETYPE_PPT
  ,mht = LIBMTP_FILETYPE_MHT
  ,jp2 = LIBMTP_FILETYPE_JP2
+ ,jpx = LIBMTP_FILETYPE_JPX
+ ,album = LIBMTP_FILETYPE_ALBUM
+ ,playlist = LIBMTP_FILETYPE_PLAYLIST
  ,unknown = LIBMTP_FILETYPE_UNKNOWN
  }
 
@@ -186,7 +189,7 @@ instance Storable Track_t where
         artist <- #{peek LIBMTP_track_t, artist} ptr
         composer <- #{peek LIBMTP_track_t, composer} ptr
         genre <- #{peek LIBMTP_track_t, genre} ptr
-        album <- #{peek LIBMTP_track_t, album} ptr
+        alb <- #{peek LIBMTP_track_t, album} ptr
         date <- #{peek LIBMTP_track_t, date} ptr
         fname <- #{peek LIBMTP_track_t, filename} ptr
         trackno <- #{peek LIBMTP_track_t, tracknumber} ptr
@@ -201,7 +204,7 @@ instance Storable Track_t where
         fsize <- #{peek LIBMTP_track_t, filesize} ptr
         ftype <- #{peek LIBMTP_track_t, filetype} ptr
         next <- #{peek LIBMTP_track_t, next} ptr
-        return $! Track_t iid pid sid title artist composer genre album
+        return $! Track_t iid pid sid title artist composer genre alb
                           date fname trackno dur srate chans codec brate
                           bratetype rating count fsize ftype next
     poke ptr tt = do
