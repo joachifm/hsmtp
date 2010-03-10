@@ -80,6 +80,18 @@ newtype FileType = FileType { unFileType :: CInt }
  ,unknown = LIBMTP_FILETYPE_UNKNOWN
  }
 
+-- Error code enumeration.
+newtype ErrorCode = ErrorCode { unErrorCode :: CInt }
+    deriving (Eq, Show)
+
+#{enum ErrorCode, ErrorCode
+ ,general = LIBMTP_ERROR_GENERAL
+ ,noDevice = LIBMTP_ERROR_NO_DEVICE_ATTACHED
+ ,storageFull = LIBMTP_ERROR_STORAGE_FULL
+ ,connectionFailed = LIBMTP_ERROR_CONNECTING
+ ,cancelled = LIBMTP_ERROR_CANCELLED
+ }
+
 -- Opaque types, only passed around between C funcs, but never
 -- dereferenced on the Haskell side.
 data MTPDevice

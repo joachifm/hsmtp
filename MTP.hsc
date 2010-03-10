@@ -1,5 +1,4 @@
-{-# LANGUAGE CPP, ForeignFunctionInterface, EmptyDataDecls,
-             DeriveDataTypeable #-}
+{-# LANGUAGE DeriveDataTypeable #-}
 
 -- |
 -- Module      : MTP
@@ -51,8 +50,6 @@ module MTP (
     -- * Object management
     deleteObject, setObjectName
     ) where
-
-#include <libmtp.h>
 
 import Foreign.Handle
 import MTP.Foreign
@@ -160,13 +157,14 @@ checkError h = withMTPHandle h $ \devptr -> do
         et <- peek e_ptr
         es <- peekCString (et_errortext et)
         c_clear_errorstack devptr
-        case et_errornumber et of
-            #{const LIBMTP_ERROR_GENERAL} -> throw $ General es
-            #{const LIBMTP_ERROR_NO_DEVICE_ATTACHED} -> throw NoDevice
-            #{const LIBMTP_ERROR_STORAGE_FULL} -> throw StorageFull
-            #{const LIBMTP_ERROR_CONNECTING} -> throw ConnectionFailed
-            #{const LIBMTP_ERROR_CANCELLED} -> throw Cancelled
-            x -> error $ "checkError: unhandled error number: " ++ show x
+        case ErrorCode (et_errornumber et) of
+            x | x == general -> throw $ General es
+              | x == noDevice -> throw NoDevice
+              | x == storageFull -> throw StorageFull
+              | x == connectionFailed -> throw ConnectionFailed
+              | x == cancelled -> throw Cancelled
+              | otherwise -> error $ "checkError: unhandled error number: " ++
+                                     show x
 
 -- | Connect to the first available MTP device.
 getFirstDevice :: IO MTPHandle
