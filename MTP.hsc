@@ -34,6 +34,7 @@ module MTP (
     hGetFile, hSendFile,
     setFileName,
     -- * Track management
+    emptyTrack,
     doesTrackExist,
     getTrackListing,
     getTrack,
@@ -896,6 +897,32 @@ peekTrack = go []
                             , trackFileSize = fromIntegral (tt_filesize tt)
                             , trackFileType = FileType (tt_filetype tt)
                             }
+
+-- | An empty track.
+emptyTrack :: Track
+emptyTrack =
+    Track { trackAlbum = ""
+          , trackArtist = ""
+          , trackBitrate = 0
+          , trackBitrateType = 0
+          , trackComposer = ""
+          , trackDate = ""
+          , trackDuration = 0
+          , trackFileName = ""
+          , trackFileSize = 0
+          , trackGenre = ""
+          , trackFileType = unknown
+          , trackID = 0
+          , trackChannels = 0
+          , trackParentID = 0
+          , trackRating = 0
+          , trackSamplerate = 0
+          , trackStorageID = 0
+          , trackTitle = ""
+          , trackNumber = 0
+          , trackUseCount = 0
+          , trackWavecodec = 0
+          }
 
 -- | Get a list of all tracks stored on the device.
 getTrackListing :: MTPHandle -> IO [Track]
