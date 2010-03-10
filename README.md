@@ -17,6 +17,13 @@ The preferred method of building is using [cabal-install]:
 
 [cabal-install]: http://hackage.haskell.org/package/cabal-install
 
+# Usage
+
+    > import qualified MTP
+    > main = do
+    >     MTP.init
+    >     MTP.withFirstDevice getDeviceVersion
+
 # Author
 Joachim Fasting \<joachim.fasting@gmail.com\>
 
