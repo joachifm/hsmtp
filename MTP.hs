@@ -377,12 +377,6 @@ withTrackPtr t = bracket alloc free
                            , tt_next = nullPtr
                            }
 
--- | Test whether a track exists on the device.
-doesTrackExist :: MTPHandle -> Int -> IO Bool
-doesTrackExist h i = withMTPHandle h $ \devptr -> do
-    exists <- c_track_exists devptr (fromIntegral i)
-    return $ exists /= 0
-
 peekTrack :: Ptr Track_t -> IO [Track]
 peekTrack = go []
     where
@@ -450,6 +444,12 @@ emptyTrack =
           , trackUseCount = 0
           , trackWavecodec = 0
           }
+
+-- | Test whether a track exists on the device.
+doesTrackExist :: MTPHandle -> Int -> IO Bool
+doesTrackExist h i = withMTPHandle h $ \devptr -> do
+    exists <- c_track_exists devptr (fromIntegral i)
+    return $ exists /= 0
 
 -- | Get a list of all tracks stored on the device.
 getTrackListing :: MTPHandle -> IO [Track]
