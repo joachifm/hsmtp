@@ -23,7 +23,7 @@ module MTP (
     firmware, aac, mediacard, flac, mp2, m4a, doc, xml, xls, ppt, mht, jp2,
     unknown,
     -- * Device management
-    getFirstDevice, releaseDevice, resetDevice,
+    init, getFirstDevice, releaseDevice, resetDevice,
     withFirstDevice,
     getDeviceVersion, getManufacturerName, getModelName, getSerialNumber,
     getFriendlyName, getBatteryLevel, getSupportedFileTypes,
@@ -62,6 +62,7 @@ import Data.Maybe
 import Data.Typeable
 import Foreign
 import Foreign.C
+import Prelude hiding (init)
 import System.FilePath
 import System.IO
 

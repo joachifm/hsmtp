@@ -13,6 +13,7 @@
 
 module MTP.Foreign where
 
+import Prelude hiding (init)
 import Foreign
 import Foreign.C
 
@@ -303,6 +304,8 @@ instance Storable Playlist_t where
 ------------------------------------------------------------------------------
 -- Foreign imports
 ------------------------------------------------------------------------------
+
+foreign import ccall unsafe "LIBMTP_Init" init :: IO ()
 
 foreign import ccall unsafe "LIBMTP_Get_First_Device" c_get_first_device
     :: IO (Ptr MTPDevice)
