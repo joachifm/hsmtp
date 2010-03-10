@@ -52,17 +52,16 @@ module MTP (
     deleteObject, setObjectName
     ) where
 
+import Foreign.Handle
+
 import Control.Exception
 import Control.Monad
-import GHC.IO.Handle
 import Data.Maybe
 import Data.Typeable
 import Foreign
 import Foreign.C
-import System.Posix.IO
-import System.Posix.Types
+import System.IO
 
-#include <stdio.h>
 #include <libmtp.h>
 
 #let alignment t = "%lu", (unsigned long)offsetof(struct {char x__; t(y__); }, y__)
@@ -335,12 +334,6 @@ instance Storable Playlist_t where
 ------------------------------------------------------------------------------
 -- Foreign imports
 ------------------------------------------------------------------------------
-
-foreign import ccall unsafe "fdopen" fdopen :: Fd -> CString -> IO (Ptr CFile)
-
-foreign import ccall unsafe "fflush" fflush :: Ptr CFile -> IO ()
-
-foreign import ccall unsafe "fclose" fclose :: Ptr CFile -> IO ()
 
 foreign import ccall unsafe "LIBMTP_Get_First_Device" c_get_first_device
     :: IO (Ptr MTPDevice)
@@ -640,15 +633,6 @@ checkError h = withMTPHandle h $ \devptr -> do
             #{const LIBMTP_ERROR_CONNECTING} -> throw ConnectionFailed
             #{const LIBMTP_ERROR_CANCELLED} -> throw Cancelled
             x -> error $ "checkError: unhandled error number: " ++ show x
-
--- Convert a Handle to a CFile.
--- Source <http://haskell.org/haskellwiki/The_Monad.Reader/Issue2/Bzlib2Binding>
-handleToCFile :: Handle -> String -> IO (Ptr CFile)
-handleToCFile h m = withCAString m $ \iomode -> do
-    -- Create a duplicate so the original handle is kept open
-    h' <- hDuplicate h
-    fd <- handleToFd h'
-    fdopen fd iomode
 
 -- | Connect to the first available MTP device.
 getFirstDevice :: IO MTPHandle
