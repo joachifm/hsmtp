@@ -23,7 +23,8 @@ source-repository head
 library
         exposed-modules: MTP
         other-modules: Foreign.Handle,
-                       MTP.Foreign
+                       MTP.Foreign,
+                       MTP.Handle
         build-depends: base ==4.2.*, unix ==2.4.*, filepath ==1.1.*
         extensions: ForeignFunctionInterface, CPP, EmptyDataDecls,
                     DeriveDataTypeable

@@ -55,6 +55,7 @@ module MTP (
 
 import Foreign.Handle
 import MTP.Foreign
+import MTP.Handle
 
 import Control.Exception
 import Control.Monad
@@ -135,15 +136,6 @@ data Playlist = Playlist
     , playlistNoTracks :: Int
     } deriving (Eq, Show)
 
--- | A handle to an MTP device connection.
-data MTPHandle = MTPHandle !(ForeignPtr MTPDevice)
-    deriving (Eq, Show)
-
--- XXX: should check that the handle is usable
--- A helper that lifts operations on MTPDevice into MTPHandle
-withMTPHandle :: MTPHandle -> (Ptr MTPDevice -> IO a) -> IO a
-withMTPHandle (MTPHandle h) = withForeignPtr h
-
 ------------------------------------------------------------------------------
 -- Device management
 ------------------------------------------------------------------------------
@@ -176,17 +168,12 @@ getFirstDevice = do
     devptr <- c_get_first_device
     if devptr == nullPtr
        then throw NoDevice
-       else do
-           -- XXX: newForeignPtr finalizerFree devptr causes a double free
-           -- error when the finalizer is run.
-           dev <- newForeignPtr_ devptr
-           return (MTPHandle dev)
+       else open devptr
 
--- XXX: using the handle after running this causes a segmentation fault.
 -- XXX: we should free the ptr, but it causes a double free error, WHY, OH WHY
--- | Close connection to a MTP device.
+-- | Close connection to a MTP device. The handle is unusable after this.
 releaseDevice :: MTPHandle -> IO ()
-releaseDevice h = withMTPHandle h c_release_device
+releaseDevice h = withMTPHandle h c_release_device >> close h
 
 -- | Reset device.
 resetDevice :: MTPHandle -> IO ()
