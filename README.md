@@ -4,8 +4,10 @@ A FFI binding to [libmtp], an implementation of the Media Transfer Protocol.
 [libmtp]: http://libmtp.sourceforge.net
 
 # Getting
+* [Latest release]
+* `git clone git://github.com/joachifm/hsmtp.git`
 
-    $ git clone git://github.com/joachifm/hsmtp.git
+[Latest release]: http://hackage.haskell.org/package/mtp
 
 # Building
 The preferred method of building is using [cabal-install]:
@@ -28,4 +30,4 @@ The preferred method of building is using [cabal-install]:
 Joachim Fasting \<joachim.fasting@gmail.com\>
 
 # Licence
-LGPL version 2.1
+LGPL version 2.1 (see COPYING)
