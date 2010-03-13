@@ -10,6 +10,16 @@
 -- Portability : not portable
 --
 -- Bindings to libmtp. High-level interface.
+--
+-- Usage:
+--
+-- > import qualified MTP
+--
+-- > main = do
+--
+-- > MTP.init
+--
+-- > MTP.withFirstDevice MTP.getDeviceVersion
 
 module MTP (
     -- * Types
