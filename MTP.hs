@@ -150,6 +150,10 @@ data Playlist = Playlist
 -- Device management
 ------------------------------------------------------------------------------
 
+-- | Initialize MTP.
+init :: IO ()
+init = c_init
+
 -- | Open a connection to the first available MTP device and run an
 -- action, closing the connection afterwards.
 withFirstDevice :: (MTPHandle -> IO a) -> IO a
