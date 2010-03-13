@@ -1,3 +1,8 @@
+* version 0.1.1.1, 2010-03-13
+	Internal:
+	- Reimplemented MTPHandle, now supports closing
+	- Check if handle is usable before using it
+
 * version 0.1.1.0, 2010-03-10
 	External:
 	- Add binding to LIBMTP_Init
