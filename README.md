@@ -22,7 +22,7 @@ The preferred method of building is using [cabal-install]:
     > import qualified MTP
     > main = do
     >     MTP.init
-    >     MTP.withFirstDevice getDeviceVersion
+    >     MTP.withFirstDevice MTP.getDeviceVersion
 
 # Author
 Joachim Fasting \<joachim.fasting@gmail.com\>
