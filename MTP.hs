@@ -24,9 +24,10 @@
 module MTP (
     -- * Types
     MTPHandle, Track(..), File(..), Folder(..), Playlist(..), FileType,
-    MTPException(..),
+    StorageOrder, MTPException(..),
     -- * Constants
     version,
+    notsorted, freespace, maxspace,
     wav, mp3, wma, ogg, audible, mp4, undef_audio, wmv, avi, mpeg, asf, qt,
     undef_video, jpeg, jfif, tiff, bmp, gif, pict, png, vcalendar1,
     vcalendar2, vcard2, vcard3, windowsimageformat, winexec, text, html,

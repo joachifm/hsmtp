@@ -83,6 +83,15 @@ newtype FileType = FileType { unFileType :: CInt }
  ,unknown = LIBMTP_FILETYPE_UNKNOWN
  }
 
+-- | Storage order.
+newtype StorageOrder = StorageOrder { unStorageOrder :: CInt }
+    deriving (Eq, Show)
+
+notsorted, freespace, maxspace :: StorageOrder
+notsorted = StorageOrder #{const LIBMTP_STORAGE_SORTBY_NOTSORTED}
+freespace = StorageOrder #{const LIBMTP_STORAGE_SORTBY_FREESPACE}
+maxspace  = StorageOrder #{const LIBMTP_STORAGE_SORTBY_MAXSPACE}
+
 -- Error code enumeration.
 newtype ErrorCode = ErrorCode { unErrorCode :: CInt }
     deriving (Eq, Show)
