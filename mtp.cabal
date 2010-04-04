@@ -22,6 +22,7 @@ source-repository head
       location: git://github.com/joachifm/hsmtp.git
 
 library
+        hs-source-dirs: src
         exposed-modules: MTP
         other-modules: Foreign.Handle,
                        MTP.Foreign,
