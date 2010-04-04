@@ -533,7 +533,7 @@ peekFolder = go []
             name <- peekCString (fdt_name fdt)
             child <- if fdt_child fdt == nullPtr
                       then return Nothing
-                      else peek (fdt_child fdt) >>= convert >>= return . Just
+                      else Just `fmap` (peek (fdt_child fdt) >>= convert)
             return $! Folder
                        { folderID = fromIntegral (fdt_folder_id fdt)
                        , folderParentID = fromIntegral (fdt_parent_id fdt)

@@ -12,6 +12,7 @@ description:
         Protocol.
         .
         See <http://libmtp.sourceforge.net> for more information.
+homepage: http://github.com/joachifm/hsmtp
 extra-source-files: ChangeLog, README.md
 build-type: Simple
 cabal-version: >= 1.6 && < 1.9
@@ -21,6 +22,7 @@ source-repository head
       location: git://github.com/joachifm/hsmtp.git
 
 library
+        hs-source-dirs: src
         exposed-modules: MTP
         other-modules: Foreign.Handle,
                        MTP.Foreign,
