@@ -360,6 +360,11 @@ foreign import ccall unsafe "LIBMTP_Get_Supported_Filetypes"
                               -> Ptr CInt
                               -> IO CInt
 
+foreign import ccall unsafe "LIBMTP_Get_Storage"
+    c_get_storage :: Ptr MTPDevice
+                  -> CInt
+                  -> IO CInt
+
 foreign import ccall unsafe "LIBMTP_Get_Filelisting_With_Callback" c_get_filelisting
     :: Ptr MTPDevice
     -> Ptr Callback
