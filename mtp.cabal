@@ -32,5 +32,6 @@ library
                     DeriveDataTypeable
         includes: libmtp.h
         extra-libraries: mtp
+        pkgconfig-depends: libmtp
         ghc-options: -Wall
         ghc-prof-options: -prof -auto-all
